@@ -25,6 +25,9 @@
                     <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
                         {{ __('Users') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('admin.llm-providers.index')" :active="request()->routeIs('admin.llm-providers.*')">
+                        {{ __('LLM Providers') }}
+                    </x-nav-link>
                     @endif
                 </div>
             </div>

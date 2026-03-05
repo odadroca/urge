@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URGE — Prompt Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-root: #0a0a0c;
+    --bg-surface: #111114;
+    --bg-card: #16161a;
+    --bg-card-hover: #1c1c21;
+    --bg-input: #111114;
+    --border: #2a2a30;
+    --border-focus: #5b5bd6;
+    --text-primary: #ececf1;
+    --text-secondary: #8e8ea0;
+    --text-muted: #565666;
+    --accent: #5b5bd6;
+    --accent-soft: rgba(91,91,214,0.12);
+    --accent-glow: rgba(91,91,214,0.25);
+    --green: #3dd68c;
+    --green-soft: rgba(61,214,140,0.1);
+    --orange: #f0a050;
+    --orange-soft: rgba(240,160,80,0.1);
+    --red: #e5484d;
+    --red-soft: rgba(229,72,77,0.1);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.3);
+    --transition: 180ms ease;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-root);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ── App Shell ── */
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+  }
+
+  .topbar-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 18px;
+    letter-spacing: -0.5px;
+  }
+
+  .topbar-brand .logo {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #fff; font-weight: 700;
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+
+  .topbar-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-secondary);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px rgba(61,214,140,0.4);
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  .status-dot.disconnected { background: var(--text-muted); box-shadow: none; animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
+  }
+
+  .topbar-actions { display: flex; gap: 8px; }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--bg-card-hover); border-color: var(--text-muted); }
+  .btn-primary {
+    background: var(--accent); border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #6e6ee0; }
+  .btn-ghost { background: transparent; border-color: transparent; }
+  .btn-ghost:hover { background: var(--bg-card); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-icon {
+    width: 32px; height: 32px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Layout ── */
+  .main-layout {
+    display: flex; flex: 1; overflow: hidden;
+  }
+
+  .sidebar {
+    width: 320px; min-width: 320px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    transition: border-color var(--transition);
+  }
+  .search-box:focus-within { border-color: var(--border-focus); }
+  .search-box svg { flex-shrink: 0; color: var(--text-muted); }
+  .search-box input {
+    flex: 1; background: none; border: none; outline: none;
+    font-family: inherit; font-size: 13px; color: var(--text-primary);
+    padding: 9px 0;
+  }
+  .search-box input::placeholder { color: var(--text-muted); }
+
+  .sidebar-list {
+    flex: 1; overflow-y: auto; padding: 8px;
+  }
+
+  .prompt-item {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-bottom: 2px;
+  }
+  .prompt-item:hover { background: var(--bg-card); }
+  .prompt-item.active { background: var(--accent-soft); }
+
+  .prompt-item-name {
+    font-weight: 600; font-size: 14px;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .prompt-item-slug {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-muted);
+  }
+
+  .prompt-item-meta {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 6px; font-size: 11px; color: var(--text-secondary);
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+  }
+  .badge-version { background: var(--accent-soft); color: var(--accent); }
+  .badge-var { background: var(--green-soft); color: var(--green); }
+  .badge-active { background: var(--green-soft); color: var(--green); }
+  .badge-inactive { background: var(--red-soft); color: var(--red); }
+
+  /* ── Content Area ── */
+  .content-area {
+    flex: 1; overflow-y: auto; padding: 32px 40px;
+  }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; color: var(--text-muted);
+    text-align: center; gap: 16px;
+  }
+  .empty-state svg { opacity: 0.3; }
+  .empty-state p { font-size: 14px; max-width: 300px; line-height: 1.6; }
+
+  /* ── Detail View ── */
+  .detail-header {
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-title {
+    font-size: 26px; font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .detail-slug {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .detail-description {
+    font-size: 14px; color: var(--text-secondary);
+    line-height: 1.6; margin-bottom: 14px;
+  }
+
+  .detail-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .tab-bar {
+    display: flex; gap: 2px; margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    padding: 10px 16px;
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; transition: all var(--transition);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+  /* ── Code Block ── */
+  .code-block-wrapper {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .code-block-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-muted);
+  }
+
+  .code-block {
+    padding: 18px 20px;
+    background: var(--bg-root);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; line-height: 1.7;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-height: 500px; overflow-y: auto;
+  }
+
+  .code-block .var-highlight {
+    color: var(--green);
+    background: var(--green-soft);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* ── Versions Table ── */
+  .versions-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+
+  .versions-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .versions-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .versions-table tr:last-child td { border-bottom: none; }
+  .versions-table tr:hover td { background: var(--bg-card); }
+
+  .versions-table .version-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; color: var(--text-primary);
+  }
+
+  /* ── Render Form ── */
+  .render-section { margin-top: 8px; }
+
+  .render-form { display: flex; flex-direction: column; gap: 16px; }
+
+  .form-group {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+
+  .form-label {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-secondary);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .form-label code {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--green);
+  }
+
+  .form-input {
+    font-family: inherit; font-size: 13px;
+    padding: 9px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .form-input:focus { border-color: var(--border-focus); }
+
+  .form-input::placeholder { color: var(--text-muted); }
+
+  textarea.form-input {
+    min-height: 80px; resize: vertical;
+    font-family: inherit; line-height: 1.5;
+  }
+
+  .render-output {
+    margin-top: 20px;
+  }
+
+  .render-output-label {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .rendered-text {
+    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px; line-height: 1.7;
+    white-space: pre-wrap; word-break: break-word;
+    color: var(--text-primary);
+  }
+
+  .missing-warning {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: var(--orange-soft);
+    border: 1px solid rgba(240,160,80,0.2);
+    border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--orange);
+    margin-bottom: 14px;
+  }
+
+  /* ── Connect Screen ── */
+  .connect-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+
+  .connect-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 44px;
+    width: 100%; max-width: 420px;
+    box-shadow: var(--shadow), 0 0 60px rgba(91,91,214,0.06);
+  }
+
+  .connect-card h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px; font-weight: 700;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .connect-card h1 .logo {
+    width: 34px; height: 34px;
+    background: var(--accent);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #fff;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .connect-card p {
+    color: var(--text-secondary);
+    font-size: 14px; line-height: 1.5;
+    margin-bottom: 28px;
+  }
+
+  .connect-form { display: flex; flex-direction: column; gap: 16px; }
+
+  .connect-form .form-group label {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px; display: block;
+  }
+
+  .connect-form .form-input { width: 100%; }
+
+  .connect-error {
+    padding: 10px 14px;
+    background: var(--red-soft);
+    border: 1px solid rgba(229,72,77,0.2);
+    border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--red);
+  }
+
+  .connect-btn {
+    width: 100%; padding: 11px;
+    font-size: 14px; font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* ── Loading / Spinner ── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-center {
+    display: flex; align-items: center; justify-content: center;
+    padding: 60px; width: 100%;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    padding: 10px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--text-primary);
+    box-shadow: var(--shadow);
+    z-index: 100;
+    animation: toastIn 0.3s ease;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .sidebar { width: 260px; min-width: 260px; }
+    .content-area { padding: 24px 20px; }
+  }
+
+  /* ── Fade In ── */
+  .fade-in {
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+/* ── Icons (inline SVG) ── */
+const Icon = {
+  Search: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+  Copy: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+  Play: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
+  Clock: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Disconnect: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18.36 6.64A9 9 0 0 1 20.77 15"/><path d="M6.16 6.16a9 9 0 1 0 12.68 12.68"/><line x1="2" y1="2" x2="22" y2="22"/></svg>,
+  Prompt: () => <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+  Refresh: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>,
+};
+
+/* ── API Helper ── */
+function createApi(baseUrl, apiKey) {
+  const headers = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+  };
+
+  return {
+    async list() {
+      const r = await fetch(`${baseUrl}/api/v1/prompts`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return unwrapList(json).map(normalizePrompt);
+    },
+    async get(slug) {
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return normalizePrompt(unwrap(json));
+    },
+    async versions(slug) {
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}/versions`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return unwrapList(json);
+    },
+    async getVersion(slug, version) {
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}/versions/${version}`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return normalizePrompt(unwrap(json));
+    },
+    async render(slug, variables, version) {
+      const body = { variables };
+      if (version != null) body.version = version;
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}/render`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return unwrap(json);
+    },
+  };
+}
+
+async function parseError(r) {
+  try {
+    const data = await r.json();
+    return new Error(data.error?.message || data.message || `HTTP ${r.status}`);
+  } catch {
+    return new Error(`HTTP ${r.status}`);
+  }
+}
+
+/* ── Normalize URGE API responses ── */
+function unwrap(data) {
+  return data?.data ?? data;
+}
+
+function unwrapList(data) {
+  if (data?.data && Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data)) return data;
+  return data?.prompts || data?.data || [];
+}
+
+function normalizePrompt(p) {
+  if (!p) return p;
+  const v = p.version || {};
+  return {
+    ...p,
+    content: p.content || v.content || '',
+    variables: p.variables || v.variables || [],
+    active_version: p.active_version ?? v.version_number ?? null,
+    commit_message: p.commit_message || v.commit_message || '',
+    created_by: p.created_by || v.created_by || '',
+    created_at: p.created_at || v.created_at || '',
+  };
+}
+
+/* ── Highlight {{vars}} in text ── */
+function highlightVars(text) {
+  if (!text) return text;
+  const parts = text.split(/({{[a-zA-Z_]\w*}})/g);
+  return parts.map((part, i) =>
+    part.startsWith('{{') && part.endsWith('}}')
+      ? <span key={i} className="var-highlight">{part}</span>
+      : part
+  );
+}
+
+/* ── Toast component ── */
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2000);
+    return () => clearTimeout(t);
+  }, []);
+  return <div className="toast">{message}</div>;
+}
+
+/* ── Connect Screen ── */
+function ConnectScreen({ onConnect }) {
+  const [url, setUrl] = useState(localStorage.getItem('urge_url') || '');
+  const [key, setKey] = useState(localStorage.getItem('urge_key') || '');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    const cleanUrl = url.replace(/\/+$/, '');
+    if (!cleanUrl || !key) { setError('Both fields are required'); return; }
+    setLoading(true); setError('');
+    try {
+      const api = createApi(cleanUrl, key);
+      await api.list();
+      localStorage.setItem('urge_url', cleanUrl);
+      localStorage.setItem('urge_key', key);
+      onConnect(cleanUrl, key);
+    } catch (e) {
+      setError(e.message || 'Connection failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="connect-screen">
+      <div className="connect-card fade-in">
+        <h1><span className="logo">U</span> URGE</h1>
+        <p>Connect to your prompt management server to explore, render, and manage your prompts.</p>
+        {error && <div className="connect-error" style={{marginBottom:16}}>{error}</div>}
+        <div className="connect-form">
+          <div className="form-group">
+            <label>Server URL</label>
+            <input className="form-input" placeholder="https://prompts.example.com"
+              value={url} onChange={e => setUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          <div className="form-group">
+            <label>API Key</label>
+            <input className="form-input" type="password" placeholder="urge_..."
+              value={key} onChange={e => setKey(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          <button className="btn btn-primary connect-btn" onClick={handleSubmit} disabled={loading}>
+            {loading ? <><div className="spinner" style={{width:14,height:14,borderWidth:2}}/> Connecting…</> : 'Connect'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sidebar ── */
+function Sidebar({ prompts, selected, onSelect, search, onSearch, loading }) {
+  return (
+    <div className="sidebar">
+      <div className="sidebar-header">
+        <div className="search-box">
+          <Icon.Search />
+          <input placeholder="Search prompts…" value={search}
+            onChange={e => onSearch(e.target.value)} />
+        </div>
+      </div>
+      <div className="sidebar-list">
+        {loading ? (
+          <div className="loading-center"><div className="spinner"/></div>
+        ) : prompts.length === 0 ? (
+          <div style={{padding:20,textAlign:'center',color:'var(--text-muted)',fontSize:13}}>
+            {search ? 'No prompts match your search' : 'No prompts found'}
+          </div>
+        ) : prompts.map(p => (
+          <div key={p.slug} className={`prompt-item ${selected === p.slug ? 'active' : ''}`}
+            onClick={() => onSelect(p.slug)}>
+            <div className="prompt-item-name">
+              {p.name}
+              {p.active_version != null && <span className="badge badge-version">v{p.active_version}</span>}
+            </div>
+            <div className="prompt-item-slug">{p.slug}</div>
+            {p.variables && p.variables.length > 0 && (
+              <div className="prompt-item-meta">
+                {p.variables.map(v => <span key={v} className="badge badge-var">{`{{${v}}}`}</span>)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Detail: Content tab ── */
+function ContentTab({ prompt, onCopy }) {
+  const content = prompt.content || '';
+  return (
+    <div className="fade-in">
+      <div className="code-block-wrapper">
+        <div className="code-block-header">
+          <span>prompt content</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => { navigator.clipboard.writeText(content); onCopy(); }}>
+            <Icon.Copy /> Copy
+          </button>
+        </div>
+        <div className="code-block">{highlightVars(content)}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Detail: Versions tab ── */
+function VersionsTab({ slug, api }) {
+  const [versions, setVersions] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedVersion, setSelectedVersion] = useState(null);
+  const [versionContent, setVersionContent] = useState(null);
+
+  useEffect(() => {
+    setLoading(true); setSelectedVersion(null); setVersionContent(null);
+    api.versions(slug).then(data => {
+      setVersions(data);
+    }).catch(() => setVersions([])).finally(() => setLoading(false));
+  }, [slug]);
+
+  const viewVersion = async (v) => {
+    const num = v.version ?? v.version_number ?? v.id;
+    setSelectedVersion(num);
+    try {
+      const data = await api.getVersion(slug, num);
+      setVersionContent(data.content || '');
+    } catch { setVersionContent('(failed to load)'); }
+  };
+
+  if (loading) return <div className="loading-center"><div className="spinner"/></div>;
+  if (!versions || versions.length === 0) return <div style={{color:'var(--text-muted)',fontSize:13}}>No version history found.</div>;
+
+  return (
+    <div className="fade-in">
+      <table className="versions-table">
+        <thead><tr><th>Version</th><th>Message</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {versions.map((v, i) => {
+            const num = v.version ?? v.version_number ?? v.id ?? i + 1;
+            const isActive = v.is_active || v.active || false;
+            return (
+              <tr key={num}>
+                <td className="version-num">v{num}</td>
+                <td>{v.commit_message || v.message || '—'}</td>
+                <td>{isActive ? <span className="badge badge-active">active</span> : <span style={{color:'var(--text-muted)'}}>—</span>}</td>
+                <td><button className="btn btn-ghost btn-sm" onClick={() => viewVersion(v)}>View</button></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {selectedVersion != null && versionContent != null && (
+        <div style={{marginTop: 20}} className="fade-in">
+          <div className="code-block-wrapper">
+            <div className="code-block-header"><span>v{selectedVersion} content</span></div>
+            <div className="code-block">{highlightVars(versionContent)}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Detail: Render tab ── */
+function RenderTab({ prompt, api }) {
+  const vars = prompt.variables || [];
+  const [values, setValues] = useState(() => {
+    const init = {};
+    vars.forEach(v => init[v] = '');
+    return init;
+  });
+  const [result, setResult] = useState(null);
+  const [missing, setMissing] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const init = {};
+    (prompt.variables || []).forEach(v => init[v] = '');
+    setValues(init); setResult(null); setMissing([]); setError('');
+  }, [prompt.slug]);
+
+  const handleRender = async () => {
+    setLoading(true); setError(''); setResult(null); setMissing([]);
+    try {
+      const data = await api.render(prompt.slug, values);
+      setResult(data.rendered || data.content || '');
+      setMissing(data.variables_missing || []);
+    } catch (e) {
+      setError(e.message || 'Render failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (vars.length === 0) {
+    return (
+      <div className="fade-in">
+        <p style={{color:'var(--text-muted)', fontSize: 13, marginBottom: 16}}>
+          This prompt has no variables. Click render to see the output.
+        </p>
+        <button className="btn btn-primary" onClick={handleRender} disabled={loading}>
+          {loading ? <div className="spinner" style={{width:14,height:14,borderWidth:2}}/> : <Icon.Play />} Render
+        </button>
+        {result != null && (
+          <div className="render-output fade-in">
+            <div className="render-output-label">Rendered Output</div>
+            <div className="rendered-text">{result}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="render-section fade-in">
+      <div className="render-form">
+        {vars.map(v => (
+          <div key={v} className="form-group">
+            <label className="form-label"><code>{`{{${v}}}`}</code></label>
+            <textarea className="form-input" rows="2"
+              placeholder={`Enter value for ${v}…`}
+              value={values[v] || ''}
+              onChange={e => setValues(prev => ({...prev, [v]: e.target.value}))} />
+          </div>
+        ))}
+        <div>
+          <button className="btn btn-primary" onClick={handleRender} disabled={loading}>
+            {loading ? <div className="spinner" style={{width:14,height:14,borderWidth:2}}/> : <Icon.Play />} Render Prompt
+          </button>
+        </div>
+      </div>
+      {error && <div className="connect-error" style={{marginTop:16}}>{error}</div>}
+      {result != null && (
+        <div className="render-output fade-in">
+          {missing.length > 0 && (
+            <div className="missing-warning">
+              ⚠ Missing variables: {missing.join(', ')}
+            </div>
+          )}
+          <div className="render-output-label">Rendered Output</div>
+          <div className="rendered-text">{result}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Detail View ── */
+function DetailView({ slug, api, onCopy }) {
+  const [prompt, setPrompt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('content');
+
+  useEffect(() => {
+    setLoading(true); setTab('content');
+    api.get(slug).then(setPrompt).catch(() => setPrompt(null)).finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) return <div className="loading-center"><div className="spinner"/></div>;
+  if (!prompt) return <div style={{color:'var(--red)',padding:40}}>Failed to load prompt.</div>;
+
+  const vars = prompt.variables || [];
+
+  return (
+    <div className="fade-in">
+      <div className="detail-header">
+        <div className="detail-title">{prompt.name}</div>
+        <div className="detail-slug">{prompt.slug}</div>
+        {prompt.description && <div className="detail-description">{prompt.description}</div>}
+        <div className="detail-badges">
+          {prompt.active_version != null && <span className="badge badge-version">v{prompt.active_version}</span>}
+          {vars.map(v => <span key={v} className="badge badge-var">{`{{${v}}}`}</span>)}
+        </div>
+      </div>
+
+      <div className="tab-bar">
+        <button className={`tab ${tab === 'content' ? 'active' : ''}`} onClick={() => setTab('content')}>Content</button>
+        <button className={`tab ${tab === 'versions' ? 'active' : ''}`} onClick={() => setTab('versions')}>Versions</button>
+        <button className={`tab ${tab === 'render' ? 'active' : ''}`} onClick={() => setTab('render')}>Render</button>
+      </div>
+
+      {tab === 'content' && <ContentTab prompt={prompt} onCopy={onCopy} />}
+      {tab === 'versions' && <VersionsTab slug={slug} api={api} />}
+      {tab === 'render' && <RenderTab prompt={prompt} api={api} />}
+    </div>
+  );
+}
+
+/* ── Main App ── */
+function App() {
+  const [connected, setConnected] = useState(false);
+  const [api, setApi] = useState(null);
+  const [serverUrl, setServerUrl] = useState('');
+  const [prompts, setPrompts] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [listLoading, setListLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const handleConnect = useCallback((url, key) => {
+    const a = createApi(url, key);
+    setApi(a); setServerUrl(url); setConnected(true);
+    setListLoading(true);
+    a.list().then(data => {
+      setPrompts(data);
+    }).catch(() => setPrompts([])).finally(() => setListLoading(false));
+  }, []);
+
+  const handleDisconnect = () => {
+    setConnected(false); setApi(null); setPrompts([]);
+    setSelected(null); setSearch('');
+    localStorage.removeItem('urge_url');
+    localStorage.removeItem('urge_key');
+  };
+
+  const refreshList = () => {
+    if (!api) return;
+    setListLoading(true);
+    api.list().then(data => {
+      setPrompts(data);
+    }).catch(() => {}).finally(() => setListLoading(false));
+  };
+
+  const showToast = (msg) => setToast(msg);
+
+  // Auto-connect if credentials saved
+  useEffect(() => {
+    const url = localStorage.getItem('urge_url');
+    const key = localStorage.getItem('urge_key');
+    if (url && key) handleConnect(url, key);
+  }, []);
+
+  const filtered = prompts.filter(p => {
+    const q = search.toLowerCase();
+    return !q || (p.name || '').toLowerCase().includes(q)
+      || (p.slug || '').toLowerCase().includes(q)
+      || (p.description || '').toLowerCase().includes(q);
+  });
+
+  if (!connected) return <ConnectScreen onConnect={handleConnect} />;
+
+  return (
+    <div id="app">
+      <div className="topbar">
+        <div className="topbar-brand">
+          <span className="logo">U</span>
+          URGE
+        </div>
+        <div className="topbar-status">
+          <span className="status-dot" />
+          <span>{serverUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+          <span style={{color:'var(--text-muted)'}}>·</span>
+          <span>{prompts.length} prompt{prompts.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="topbar-actions">
+          <button className="btn btn-ghost btn-icon" onClick={refreshList} title="Refresh">
+            <Icon.Refresh />
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={handleDisconnect}>
+            <Icon.Disconnect /> Disconnect
+          </button>
+        </div>
+      </div>
+      <div className="main-layout">
+        <Sidebar prompts={filtered} selected={selected} onSelect={setSelected}
+          search={search} onSearch={setSearch} loading={listLoading} />
+        <div className="content-area">
+          {selected ? (
+            <DetailView slug={selected} api={api} onCopy={() => showToast('Copied to clipboard')} />
+          ) : (
+            <div className="empty-state">
+              <Icon.Prompt />
+              <p>Select a prompt from the sidebar to view its content, version history, and render it with variables.</p>
+            </div>
+          )}
+        </div>
+      </div>
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>
