@@ -155,3 +155,5 @@ cp documentation/claude_skill.md ~/.claude/skills/urge/SKILL.md
 ```
 
 Then use `/urge list`, `/urge get <slug>`, `/urge render <slug>`, etc. from any Claude Code session.
+
+---
