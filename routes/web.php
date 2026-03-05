@@ -5,6 +5,8 @@ use App\Http\Controllers\Web\Admin\LlmProviderController;
 use App\Http\Controllers\Web\ApiKeyController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\LibraryController;
+use App\Http\Controllers\Web\StoryController;
+use App\Http\Controllers\Web\StoryStepController;
 use App\Http\Controllers\Web\LlmResponseController;
 use App\Http\Controllers\Web\PromptController;
 use App\Http\Controllers\Web\PromptRunController;
@@ -63,6 +65,13 @@ Route::middleware(['auth'])->group(function () {
     Route::put('library/{library}', [LibraryController::class, 'update'])->name('library.update');
     Route::delete('library/{library}', [LibraryController::class, 'destroy'])->name('library.destroy');
     Route::get('library/{library}/export', [LibraryController::class, 'export'])->name('library.export');
+
+    // Stories
+    Route::resource('stories', StoryController::class);
+    Route::post('stories/{story}/steps', [StoryStepController::class, 'store'])->name('story-steps.store');
+    Route::delete('stories/{story}/steps/{step}', [StoryStepController::class, 'destroy'])->name('story-steps.destroy');
+    Route::post('stories/{story}/steps/{step}/move-up', [StoryStepController::class, 'moveUp'])->name('story-steps.move-up');
+    Route::post('stories/{story}/steps/{step}/move-down', [StoryStepController::class, 'moveDown'])->name('story-steps.move-down');
 
     // Admin: users + LLM providers
     Route::middleware(['role:admin'])->group(function () {
