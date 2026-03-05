@@ -1,59 +1,157 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# URGE
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A self-hosted prompt management system. Create, version-control, and publish LLM prompts through a web UI, then retrieve them from any application via a REST API.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Prompt CRUD** — create and edit prompts with descriptions and auto-generated slugs
+- **Immutable version history** — every edit creates a new numbered version; old versions are never modified or deleted
+- **Variable templating** — use `{{variable_name}}` placeholders; variables are extracted automatically and can be filled at render time via the API
+- **Active version control** — explicitly promote any version to be the one the API serves by default
+- **REST API** — read-only API with Bearer token authentication for use in LLM pipelines
+- **Multi-user with roles** — admin, editor, and viewer roles; first registered user becomes admin
+- **API key management** — per-user keys with optional expiry; keys are stored encrypted
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Stack
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- **PHP 8.3 / Laravel 12**
+- **SQLite** (single file, zero server maintenance)
+- **Blade + Alpine.js + Tailwind CSS** via Laravel Breeze
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Requirements
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- PHP 8.3+ with extensions: `openssl`, `pdo_sqlite`, `mbstring`, `curl`, `fileinfo`
+- Composer
+- Node.js + npm (for building frontend assets)
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Installation
 
-## Contributing
+```bash
+# 1. Install PHP dependencies
+composer install
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# 2. Copy environment file and configure
+cp .env.example .env
 
-## Code of Conduct
+# 3. Set your database path in .env (use forward slashes, quote the value)
+# DB_DATABASE="/absolute/path/to/storage/app/database.sqlite"
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# 4. Generate application key
+php artisan key:generate
 
-## Security Vulnerabilities
+# 5. Create the SQLite database file
+touch storage/app/database.sqlite
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# 6. Run migrations
+php artisan migrate
 
-## License
+# 7. Build frontend assets
+npm install && npm run build
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Development server
+
+```bash
+php artisan serve
+```
+
+The app will be available at `http://127.0.0.1:8000`.
+
+---
+
+## First login
+
+Go to `/register`. The **first user to register is automatically assigned the admin role**. All subsequent registrations default to `viewer`. Admins can create and manage users directly from the **Users** page without requiring self-registration.
+
+---
+
+## API usage
+
+All API routes are under `/api/v1/` and require a Bearer token:
+
+```
+Authorization: Bearer urge_your_key_here
+```
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/prompts` | List all prompts with an active version |
+| GET | `/api/v1/prompts/{slug}` | Get the active version of a prompt |
+| GET | `/api/v1/prompts/{slug}/versions` | List all versions of a prompt |
+| GET | `/api/v1/prompts/{slug}/versions/{n}` | Get a specific version by number |
+| POST | `/api/v1/prompts/{slug}/render` | Render a prompt with variable substitution |
+
+### Render example
+
+```bash
+curl -X POST https://your-domain.com/api/v1/prompts/support-reply/render \
+  -H "Authorization: Bearer urge_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"variables": {"customer_name": "Alice", "issue": "billing"}}'
+```
+
+```json
+{
+  "data": {
+    "rendered": "Dear Alice, thank you for contacting us about billing.",
+    "prompt_slug": "support-reply",
+    "version_number": 2,
+    "variables_used": ["customer_name", "issue"],
+    "variables_missing": []
+  }
+}
+```
+
+See [`documentation/api-reference.md`](documentation/api-reference.md) for the full API reference.
+
+---
+
+## Roles
+
+| Role | Capabilities |
+|---|---|
+| **admin** | Full access — prompts, versions, users, all API keys |
+| **editor** | Create and edit prompts, manage own API keys |
+| **viewer** | Read-only access to prompts, manage own API keys |
+
+---
+
+## Deployment (shared hosting)
+
+1. Point the domain document root to the `public/` directory
+2. Set `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE_COOKIE=true` in `.env`
+3. Run `php artisan migrate --force && php artisan config:cache && php artisan route:cache`
+4. Build assets locally with `npm run build` and upload `public/build/`
+5. Back up your `APP_KEY` — it encrypts stored API key values
+
+---
+
+## Documentation
+
+| File | Contents |
+|---|---|
+| [`documentation/architecture.md`](documentation/architecture.md) | Data model, file structure, auth flows, design decisions |
+| [`documentation/api-reference.md`](documentation/api-reference.md) | Full API endpoint reference with examples |
+| [`documentation/user-guide.md`](documentation/user-guide.md) | Non-technical walkthrough for web UI users |
+| [`documentation/claude_skill.md`](documentation/claude_skill.md) | Ready-to-install Claude Code skill for URGE API access |
+
+---
+
+## Claude Code skill
+
+A Claude Code skill is included in `documentation/claude_skill.md`. To install it:
+
+```bash
+mkdir -p ~/.claude/skills/urge
+cp documentation/claude_skill.md ~/.claude/skills/urge/SKILL.md
+```
+
+Then use `/urge list`, `/urge get <slug>`, `/urge render <slug>`, etc. from any Claude Code session.
