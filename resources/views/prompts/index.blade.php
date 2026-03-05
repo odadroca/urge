@@ -16,13 +16,37 @@
                 <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
             @endif
 
+            {{-- Tag filter bar --}}
+            @if(!empty($allTags))
+            <div class="mb-4 flex flex-wrap items-center gap-2">
+                <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mr-1">Filter:</span>
+                <a href="{{ route('prompts.index') }}"
+                   class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition
+                          {{ !$tag ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400' }}">
+                    All
+                </a>
+                @foreach($allTags as $t)
+                <a href="{{ route('prompts.index', ['tag' => $t]) }}"
+                   class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition
+                          {{ $tag === $t ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-700 border-purple-200 hover:border-purple-400' }}">
+                    {{ $t }}
+                </a>
+                @endforeach
+            </div>
+            @endif
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 @if($prompts->isEmpty())
                     <div class="p-12 text-center text-gray-500">
-                        <p class="text-lg">No prompts yet.</p>
-                        @can('create', App\Models\Prompt::class)
-                        <a href="{{ route('prompts.create') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Create your first prompt</a>
-                        @endcan
+                        @if($tag)
+                            <p class="text-lg">No prompts tagged "{{ $tag }}".</p>
+                            <a href="{{ route('prompts.index') }}" class="mt-3 inline-flex items-center text-sm text-indigo-600 hover:underline">← Clear filter</a>
+                        @else
+                            <p class="text-lg">No prompts yet.</p>
+                            @can('create', App\Models\Prompt::class)
+                            <a href="{{ route('prompts.create') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Create your first prompt</a>
+                            @endcan
+                        @endif
                     </div>
                 @else
                 <table class="min-w-full divide-y divide-gray-200">
@@ -30,7 +54,7 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variables</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
@@ -39,7 +63,7 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach($prompts as $prompt)
-                        <tbody x-data="{ open: false }" class="block contents">
+                        <tbody x-data="{ open: false, copied: false }" class="block contents">
                         <tr class="hover:bg-gray-50 cursor-pointer" @click="open = !open">
                             <td class="px-6 py-4 text-gray-400">
                                 <svg x-bind:class="open ? 'rotate-90' : ''" class="w-4 h-4 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,7 +76,19 @@
                                 <p class="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{{ $prompt->description }}</p>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-400 font-mono">{{ $prompt->slug }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                @if($prompt->tags && count($prompt->tags))
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach($prompt->tags as $t)
+                                    <a href="{{ route('prompts.index', ['tag' => $t]) }}"
+                                       @click.stop
+                                       class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition">{{ $t }}</a>
+                                    @endforeach
+                                </div>
+                                @else
+                                <span class="text-gray-300">—</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 text-sm">
                                 @if($prompt->activeVersion)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">v{{ $prompt->activeVersion->version_number }}</span>
@@ -91,7 +127,19 @@
                                         @endforeach
                                     </div>
                                     @endif
-                                    <pre class="text-xs text-gray-700 font-mono bg-white border border-gray-200 rounded p-3 whitespace-pre-wrap max-h-40 overflow-auto leading-relaxed">{{ $prompt->activeVersion->content }}</pre>
+                                    <div class="relative">
+                                        <pre x-ref="preContent" class="text-xs text-gray-700 font-mono bg-white border border-gray-200 rounded p-3 pr-20 whitespace-pre-wrap max-h-40 overflow-auto leading-relaxed">{{ $prompt->activeVersion->content }}</pre>
+                                        <button
+                                            @click.stop="navigator.clipboard.writeText($refs.preContent.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)"
+                                            class="absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-1 text-xs rounded border transition"
+                                            :class="copied ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                <rect x="9" y="9" width="13" height="13" rx="2" stroke-linecap="round"/>
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/>
+                                            </svg>
+                                            <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                                        </button>
+                                    </div>
                                     @if($prompt->activeVersion->commit_message)
                                     <p class="mt-2 text-xs text-gray-400 italic">{{ $prompt->activeVersion->commit_message }}</p>
                                     @endif

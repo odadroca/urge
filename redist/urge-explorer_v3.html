@@ -543,7 +543,8 @@ const DEFAULT_PROVIDERS = [
   { id: 'anthropic', driver: 'anthropic', name: 'Anthropic', model: 'claude-haiku-4-5-20251001',  apiKey: '', baseUrl: '',                       enabled: false },
   { id: 'mistral',   driver: 'mistral',   name: 'Mistral',   model: 'mistral-small-latest',       apiKey: '', baseUrl: '',                       enabled: false },
   { id: 'gemini',    driver: 'gemini',    name: 'Gemini',    model: 'gemini-1.5-flash',           apiKey: '', baseUrl: '',                       enabled: false },
-  { id: 'ollama',    driver: 'ollama',    name: 'Ollama',    model: 'llama3.2',                   apiKey: '', baseUrl: 'http://localhost:11434',  enabled: false },
+  { id: 'ollama',      driver: 'ollama',      name: 'Ollama',      model: 'llama3.2',                        apiKey: '', baseUrl: 'http://localhost:11434',  enabled: false },
+  { id: 'openrouter',  driver: 'openrouter',  name: 'OpenRouter',  model: 'openai/gpt-4o-mini',              apiKey: '', baseUrl: '',                       enabled: false },
 ];
 
 function loadProviders() {
@@ -769,7 +770,8 @@ async function callProvider(provider, promptText) {
     case 'anthropic': return callAnthropic(provider, promptText);
     case 'mistral':   return callMistral(provider, promptText);
     case 'gemini':    return callGemini(provider, promptText);
-    case 'ollama':    return callOllama(provider, promptText);
+    case 'ollama':      return callOllama(provider, promptText);
+    case 'openrouter':  return callOpenAiCompatible({ ...provider, baseUrl: 'https://openrouter.ai/api' }, promptText);
     default: throw new Error(`Unknown driver: ${provider.driver}`);
   }
 }

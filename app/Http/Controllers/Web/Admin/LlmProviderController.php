@@ -33,7 +33,7 @@ class LlmProviderController extends Controller
         $data = [
             'name'     => $validated['name'],
             'model'    => $validated['model'],
-            'base_url' => $validated['base_url'] ?: null,
+            'base_url' => $validated['base_url'] ?? null,
             'enabled'  => $request->boolean('enabled'),
         ];
 

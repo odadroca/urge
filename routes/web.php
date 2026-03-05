@@ -30,6 +30,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('prompts.versions.create');
     Route::post('prompts/{prompt}/versions', [PromptVersionController::class, 'store'])
         ->name('prompts.versions.store');
+    Route::get('prompts/{prompt}/versions/compare', [PromptVersionController::class, 'compare'])
+        ->name('prompts.versions.compare');
     Route::get('prompts/{prompt}/versions/{version}', [PromptVersionController::class, 'show'])
         ->name('prompts.versions.show');
     Route::post('prompts/{prompt}/versions/{version}/activate', [PromptVersionController::class, 'activate'])

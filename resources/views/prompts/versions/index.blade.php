@@ -15,11 +15,44 @@
         </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+    <div class="py-12" x-data="{ selected: [] }">
+        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-4">
             @if(session('success'))
-                <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
+                <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
             @endif
+            @if(session('error'))
+                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{{ session('error') }}</div>
+            @endif
+
+            {{-- Compare bar (visible when 2 selected) --}}
+            <div x-show="selected.length === 2" x-cloak
+                 class="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3">
+                <p class="text-sm text-indigo-700">
+                    Comparing
+                    <strong x-text="'v' + Math.min(...selected)"></strong>
+                    and
+                    <strong x-text="'v' + Math.max(...selected)"></strong>
+                </p>
+                <div class="flex gap-2">
+                    <button @click="selected = []"
+                        class="px-3 py-1.5 text-xs text-indigo-600 border border-indigo-300 rounded-md hover:bg-white">
+                        Clear
+                    </button>
+                    <button @click="window.location = '{{ route('prompts.versions.compare', $prompt) }}?v1=' + Math.min(...selected) + '&v2=' + Math.max(...selected)"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" d="M8 7h12M8 12h8M8 17h12"/>
+                        </svg>
+                        View diff
+                    </button>
+                </div>
+            </div>
+
+            {{-- Hint when 1 selected --}}
+            <div x-show="selected.length === 1" x-cloak
+                 class="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
+                Select one more version to compare.
+            </div>
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 @if($versions->isEmpty())
@@ -28,6 +61,9 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
+                            <th class="px-4 py-3 w-10">
+                                <span class="sr-only">Select</span>
+                            </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Version</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commit Message</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Variables</th>
@@ -38,7 +74,15 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach($versions as $version)
-                        <tr class="{{ $prompt->active_version_id === $version->id ? 'bg-green-50' : '' }}">
+                        <tr class="{{ $prompt->active_version_id === $version->id ? 'bg-green-50' : '' }}"
+                            :class="selected.includes({{ $version->version_number }}) ? 'ring-2 ring-inset ring-indigo-300' : ''">
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox"
+                                    :value="{{ $version->version_number }}"
+                                    x-model="selected"
+                                    :disabled="selected.length >= 2 && !selected.includes({{ $version->version_number }})"
+                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed">
+                            </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-2">
                                     <span class="font-mono font-medium text-gray-800">v{{ $version->version_number }}</span>
@@ -74,6 +118,10 @@
                 </table>
                 @endif
             </div>
+
+            @if($versions->count() >= 2)
+            <p class="text-xs text-gray-400 text-center">Check two versions to compare them.</p>
+            @endif
         </div>
     </div>
 </x-app-layout>

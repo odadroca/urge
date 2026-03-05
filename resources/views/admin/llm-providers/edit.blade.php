@@ -36,6 +36,7 @@
                                        'mistral' => 'e.g. mistral-small-latest, mistral-large-latest',
                                        'gemini' => 'e.g. gemini-1.5-flash, gemini-1.5-pro',
                                        'ollama' => 'e.g. llama3.2, mistral, phi3',
+                                       'openrouter' => 'e.g. openai/gpt-4o-mini, anthropic/claude-haiku-4-5-20251001, google/gemini-flash-1.5',
                                        default => ''
                                    } }}">
                             @error('model')<p class="mt-1 text-sm text-red-500">{{ $message }}</p>@enderror

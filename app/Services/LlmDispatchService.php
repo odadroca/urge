@@ -9,6 +9,7 @@ use App\Services\LlmProviders\LlmResult;
 use App\Services\LlmProviders\MistralDriver;
 use App\Services\LlmProviders\OllamaDriver;
 use App\Services\LlmProviders\OpenAiDriver;
+use App\Services\LlmProviders\OpenRouterDriver;
 use Illuminate\Support\Facades\Crypt;
 
 class LlmDispatchService
@@ -28,8 +29,9 @@ class LlmDispatchService
             'anthropic' => new AnthropicDriver($apiKey, $provider->model),
             'mistral'   => new MistralDriver($apiKey, $provider->model),
             'gemini'    => new GeminiDriver($apiKey, $provider->model),
-            'ollama'    => new OllamaDriver($provider->base_url ?? 'http://localhost:11434', $provider->model),
-            default     => throw new \InvalidArgumentException("Unknown LLM driver: {$provider->driver}"),
+            'ollama'      => new OllamaDriver($provider->base_url ?? 'http://localhost:11434', $provider->model),
+            'openrouter'  => new OpenRouterDriver($apiKey, $provider->model),
+            default       => throw new \InvalidArgumentException("Unknown LLM driver: {$provider->driver}"),
         };
     }
 

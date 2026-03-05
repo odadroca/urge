@@ -51,6 +51,88 @@ class PromptVersionController extends Controller
         return view('prompts.versions.show', compact('prompt', 'version'));
     }
 
+    public function compare(Request $request, Prompt $prompt)
+    {
+        $v1 = (int) $request->query('v1');
+        $v2 = (int) $request->query('v2');
+
+        if (!$v1 || !$v2 || $v1 === $v2) {
+            return redirect()->route('prompts.versions.index', $prompt)
+                ->with('error', 'Select two different versions to compare.');
+        }
+
+        [$numA, $numB] = $v1 < $v2 ? [$v1, $v2] : [$v2, $v1];
+
+        $versionA = $prompt->versions()->where('version_number', $numA)->with('creator')->firstOrFail();
+        $versionB = $prompt->versions()->where('version_number', $numB)->with('creator')->firstOrFail();
+
+        $groups = $this->computeDiffGroups($versionA->content, $versionB->content);
+
+        $additions = 0;
+        $removals  = 0;
+        foreach ($groups as $g) {
+            if ($g['type'] === 'added')   $additions += count($g['items']);
+            if ($g['type'] === 'removed') $removals  += count($g['items']);
+        }
+
+        return view('prompts.versions.compare', compact(
+            'prompt', 'versionA', 'versionB', 'groups', 'additions', 'removals'
+        ));
+    }
+
+    private function computeDiffGroups(string $oldText, string $newText): array
+    {
+        $oldLines = explode("\n", $oldText);
+        $newLines = explode("\n", $newText);
+        $m = count($oldLines);
+        $n = count($newLines);
+
+        // LCS DP table
+        $dp = array_fill(0, $m + 1, array_fill(0, $n + 1, 0));
+        for ($i = 1; $i <= $m; $i++) {
+            for ($j = 1; $j <= $n; $j++) {
+                $dp[$i][$j] = $oldLines[$i - 1] === $newLines[$j - 1]
+                    ? $dp[$i - 1][$j - 1] + 1
+                    : max($dp[$i - 1][$j], $dp[$i][$j - 1]);
+            }
+        }
+
+        // Backtrack — build items in reverse, tracking line numbers
+        $items = [];
+        $lineA = $m;
+        $lineB = $n;
+        $i     = $m;
+        $j     = $n;
+
+        while ($i > 0 || $j > 0) {
+            if ($i > 0 && $j > 0 && $oldLines[$i - 1] === $newLines[$j - 1]) {
+                $items[] = ['type' => 'equal',   'line' => $oldLines[$i - 1], 'lineA' => $lineA--, 'lineB' => $lineB--];
+                $i--; $j--;
+            } elseif ($j > 0 && ($i === 0 || $dp[$i][$j - 1] >= $dp[$i - 1][$j])) {
+                $items[] = ['type' => 'added',   'line' => $newLines[$j - 1], 'lineA' => null,     'lineB' => $lineB--];
+                $j--;
+            } else {
+                $items[] = ['type' => 'removed', 'line' => $oldLines[$i - 1], 'lineA' => $lineA--, 'lineB' => null];
+                $i--;
+            }
+        }
+
+        $items = array_reverse($items);
+
+        // Group consecutive same-type items
+        $groups = [];
+        foreach ($items as $item) {
+            $last = count($groups) - 1;
+            if ($last >= 0 && $groups[$last]['type'] === $item['type']) {
+                $groups[$last]['items'][] = $item;
+            } else {
+                $groups[] = ['type' => $item['type'], 'items' => [$item]];
+            }
+        }
+
+        return $groups;
+    }
+
     public function activate(Prompt $prompt, int $versionNumber)
     {
         $this->authorize('activateVersion', $prompt);

@@ -8,13 +8,28 @@ use Illuminate\Http\Request;
 
 class PromptController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $prompts = Prompt::with('activeVersion', 'creator')
-            ->latest()
-            ->paginate(20);
+        $tag = $request->query('tag');
 
-        return view('prompts.index', compact('prompts'));
+        $query = Prompt::with('activeVersion', 'creator')->latest();
+
+        if ($tag) {
+            $query->whereJsonContains('tags', $tag);
+        }
+
+        $prompts = $query->paginate(20)->withQueryString();
+
+        $allTags = Prompt::whereNotNull('tags')
+            ->pluck('tags')
+            ->flatten()
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return view('prompts.index', compact('prompts', 'allTags', 'tag'));
     }
 
     public function create()
@@ -30,11 +45,14 @@ class PromptController extends Controller
         $data = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'tags'        => ['nullable', 'array'],
+            'tags.*'      => ['string', 'max:50'],
         ]);
 
         $prompt = Prompt::create([
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
+            'tags'        => $this->normalizeTags($data['tags'] ?? []),
             'created_by'  => auth()->id(),
         ]);
 
@@ -60,11 +78,14 @@ class PromptController extends Controller
         $data = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'tags'        => ['nullable', 'array'],
+            'tags.*'      => ['string', 'max:50'],
         ]);
 
         $prompt->update([
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
+            'tags'        => $this->normalizeTags($data['tags'] ?? []),
         ]);
 
         return redirect()->route('prompts.show', $prompt)->with('success', 'Prompt updated.');
@@ -76,5 +97,14 @@ class PromptController extends Controller
         $prompt->delete();
 
         return redirect()->route('prompts.index')->with('success', 'Prompt deleted.');
+    }
+
+    private function normalizeTags(array $tags): array
+    {
+        return array_values(array_unique(
+            array_filter(
+                array_map(fn($t) => strtolower(trim($t)), $tags)
+            )
+        ));
     }
 }

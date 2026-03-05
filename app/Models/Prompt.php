@@ -11,8 +11,13 @@ class Prompt extends Model
         'name',
         'slug',
         'description',
+        'tags',
         'active_version_id',
         'created_by',
+    ];
+
+    protected $casts = [
+        'tags' => 'array',
     ];
 
     protected static function booted(): void

@@ -36,6 +36,14 @@
                 @if($prompt->description)
                 <p class="text-gray-600 mb-4">{{ $prompt->description }}</p>
                 @endif
+                @if($prompt->tags && count($prompt->tags))
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                    @foreach($prompt->tags as $tag)
+                    <a href="{{ route('prompts.index', ['tag' => $tag]) }}"
+                       class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition">{{ $tag }}</a>
+                    @endforeach
+                </div>
+                @endif
                 <div class="flex flex-wrap gap-6 text-sm text-gray-500">
                     <span>Created by <strong>{{ $prompt->creator?->name }}</strong></span>
                     <span>{{ $prompt->created_at->format('Y-m-d') }}</span>
@@ -73,7 +81,19 @@
                 </div>
                 @endif
 
-                <pre class="bg-gray-50 border border-gray-200 rounded p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-96">{{ $prompt->activeVersion->content }}</pre>
+                <div x-data="{ copied: false }" class="relative">
+                    <pre x-ref="content" class="bg-gray-50 border border-gray-200 rounded p-4 pr-24 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-96">{{ $prompt->activeVersion->content }}</pre>
+                    <button
+                        @click="navigator.clipboard.writeText($refs.content.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)"
+                        class="absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded border transition"
+                        :class="copied ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400'">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" stroke-linecap="round"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/>
+                        </svg>
+                        <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                    </button>
+                </div>
             </div>
             @else
             <div class="bg-white shadow-sm sm:rounded-lg p-6 text-center text-gray-500">
