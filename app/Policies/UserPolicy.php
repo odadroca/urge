@@ -13,7 +13,8 @@ class UserPolicy
 
     public function update(User $user, User $model): bool
     {
-        return $user->isAdmin();
+        // Admins can edit anyone; any user can edit themselves
+        return $user->isAdmin() || $user->id === $model->id;
     }
 
     public function delete(User $user, User $model): bool
