@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -53,12 +54,43 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
-        $data = $request->validate([
-            'role' => ['required', 'in:admin,editor,viewer'],
-            'name' => ['required', 'string', 'max:255'],
+        $isSelf             = auth()->id() === $user->id;
+        $adminEditingOther  = auth()->user()->isAdmin() && !$isSelf;
+
+        $validated = $request->validate([
+            'name'                     => ['required', 'string', 'max:255'],
+            'email'                    => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'role'                     => $adminEditingOther ? ['required', 'in:admin,editor,viewer'] : ['nullable'],
+            'new_password'             => ['nullable', 'string', 'min:8', 'confirmed'],
+            'new_password_confirmation' => ['nullable', 'string'],
+            'current_password'         => ['nullable', 'string'],
         ]);
 
-        $user->update($data);
+        // Self-editing: verify current password before allowing a change
+        if ($isSelf && $request->filled('new_password')) {
+            if (!Hash::check($request->input('current_password', ''), $user->password)) {
+                return back()
+                    ->withErrors(['current_password' => 'The current password is incorrect.'])
+                    ->withInput();
+            }
+        }
+
+        $user->name  = $validated['name'];
+        $user->email = $validated['email'];
+
+        if ($adminEditingOther) {
+            $user->role = $validated['role'];
+        }
+
+        if (!empty($validated['new_password'])) {
+            $user->password = Hash::make($validated['new_password']);
+        }
+
+        $user->save();
+
+        if ($isSelf) {
+            return redirect()->route('users.edit', $user)->with('success', 'Account updated.');
+        }
 
         return redirect()->route('users.index')->with('success', 'User updated.');
     }

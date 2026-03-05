@@ -116,15 +116,35 @@
                             <span x-show="!saving && rating > 0" class="ml-1 text-xs text-gray-400" x-text="rating + '/5'"></span>
                         </div>
 
-                        {{-- Export --}}
+                        {{-- Export + Save to Library --}}
                         @if($response->isSuccess())
-                        <a href="{{ route('llm-responses.export', [$run, $response]) }}"
-                           class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                            </svg>
-                            Export .md
-                        </a>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('llm-responses.export', [$run, $response]) }}"
+                               class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                Export .md
+                            </a>
+                            <form method="POST" action="{{ route('library.store') }}">
+                                @csrf
+                                <input type="hidden" name="prompt_id" value="{{ $run->prompt_id }}">
+                                <input type="hidden" name="prompt_version_id" value="{{ $run->prompt_version_id }}">
+                                <input type="hidden" name="llm_provider_id" value="{{ $response->llm_provider_id }}">
+                                <input type="hidden" name="model_used" value="{{ $response->model_used }}">
+                                <input type="hidden" name="response_text" value="{{ $response->response_text }}">
+                                @if($response->rating)
+                                <input type="hidden" name="rating" value="{{ $response->rating }}">
+                                @endif
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                                    </svg>
+                                    Save to Library
+                                </button>
+                            </form>
+                        </div>
                         @endif
                     </div>
                 </div>

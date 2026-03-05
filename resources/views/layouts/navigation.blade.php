@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
+<nav x-data="{ open: false }" class="bg-white border-b border-gray-100 dark:bg-slate-800 dark:border-slate-700">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -18,6 +18,12 @@
                     <x-nav-link :href="route('prompts.index')" :active="request()->routeIs('prompts.*')">
                         {{ __('Prompts') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('library.index')" :active="request()->routeIs('library.*')">
+                        {{ __('Library') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('stories.index')" :active="request()->routeIs('stories.*')">
+                        {{ __('Stories') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('api-keys.index')" :active="request()->routeIs('api-keys.*')">
                         {{ __('API Keys') }}
                     </x-nav-link>
@@ -30,6 +36,22 @@
                     </x-nav-link>
                     @endif
                 </div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6">
+                <button @click="$store.theme.toggle()"
+                        class="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                        :title="$store.theme.dark ? 'Switch to light mode' : 'Switch to dark mode'">
+                    {{-- Sun (shown in dark mode) --}}
+                    <svg x-show="$store.theme.dark" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+                    </svg>
+                    {{-- Moon (shown in light mode) --}}
+                    <svg x-show="!$store.theme.dark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                </button>
             </div>
 
             <!-- Settings Dropdown -->
@@ -48,8 +70,8 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
+                        <x-dropdown-link :href="route('users.edit', auth()->user())">
+                            {{ __('Account Settings') }}
                         </x-dropdown-link>
 
                         <!-- Authentication -->
