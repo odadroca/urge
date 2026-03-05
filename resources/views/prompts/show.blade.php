@@ -6,6 +6,11 @@
                 <p class="text-sm text-gray-500 font-mono mt-0.5">{{ $prompt->slug }}</p>
             </div>
             <div class="flex gap-2">
+                @if($prompt->activeVersion)
+                <a href="{{ route('prompt-runs.create', $prompt) }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">
+                    Run
+                </a>
+                @endif
                 @can('createVersion', $prompt)
                 <a href="{{ route('prompts.versions.create', $prompt) }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
                     New Version
@@ -34,7 +39,8 @@
                 <div class="flex flex-wrap gap-6 text-sm text-gray-500">
                     <span>Created by <strong>{{ $prompt->creator?->name }}</strong></span>
                     <span>{{ $prompt->created_at->format('Y-m-d') }}</span>
-                    <a href="{{ route('prompts.versions.index', $prompt) }}" class="text-indigo-600 hover:underline">View version history</a>
+                    <a href="{{ route('prompts.versions.index', $prompt) }}" class="text-indigo-600 hover:underline">Version history</a>
+                    <a href="{{ route('prompt-runs.index', $prompt) }}" class="text-indigo-600 hover:underline">Run history</a>
                 </div>
             </div>
 

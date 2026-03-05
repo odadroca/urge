@@ -44,4 +44,9 @@ class Prompt extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function runs()
+    {
+        return $this->hasMany(PromptRun::class)->orderByDesc('created_at');
+    }
 }
