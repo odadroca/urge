@@ -18,6 +18,9 @@
                     <x-nav-link :href="route('prompts.index')" :active="request()->routeIs('prompts.*')">
                         {{ __('Prompts') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('library.index')" :active="request()->routeIs('library.*')">
+                        {{ __('Library') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('api-keys.index')" :active="request()->routeIs('api-keys.*')">
                         {{ __('API Keys') }}
                     </x-nav-link>

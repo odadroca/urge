@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Web\Admin\LlmProviderController;
 use App\Http\Controllers\Web\ApiKeyController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\LibraryController;
 use App\Http\Controllers\Web\LlmResponseController;
 use App\Http\Controllers\Web\PromptController;
 use App\Http\Controllers\Web\PromptRunController;
@@ -52,6 +53,16 @@ Route::middleware(['auth'])->group(function () {
     // LLM response actions
     Route::post('runs/{run}/responses/{response}/rate', [LlmResponseController::class, 'rate'])->name('llm-responses.rate');
     Route::get('runs/{run}/responses/{response}/export', [LlmResponseController::class, 'export'])->name('llm-responses.export');
+
+    // Response library
+    Route::get('library', [LibraryController::class, 'index'])->name('library.index');
+    Route::get('library/create', [LibraryController::class, 'create'])->name('library.create');
+    Route::post('library', [LibraryController::class, 'store'])->name('library.store');
+    Route::get('library/{library}', [LibraryController::class, 'show'])->name('library.show');
+    Route::get('library/{library}/edit', [LibraryController::class, 'edit'])->name('library.edit');
+    Route::put('library/{library}', [LibraryController::class, 'update'])->name('library.update');
+    Route::delete('library/{library}', [LibraryController::class, 'destroy'])->name('library.destroy');
+    Route::get('library/{library}/export', [LibraryController::class, 'export'])->name('library.export');
 
     // Admin: users + LLM providers
     Route::middleware(['role:admin'])->group(function () {
