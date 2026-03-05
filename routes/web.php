@@ -59,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
     // Response library
     Route::get('library', [LibraryController::class, 'index'])->name('library.index');
     Route::get('library/create', [LibraryController::class, 'create'])->name('library.create');
+    Route::get('library/compare', [LibraryController::class, 'compare'])->name('library.compare');
     Route::post('library', [LibraryController::class, 'store'])->name('library.store');
     Route::get('library/{library}', [LibraryController::class, 'show'])->name('library.show');
     Route::get('library/{library}/edit', [LibraryController::class, 'edit'])->name('library.edit');

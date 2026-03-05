@@ -82,6 +82,34 @@ class LibraryController extends Controller
             ->with('success', 'Response saved to library.');
     }
 
+    public function compare(Request $request)
+    {
+        $versionId = $request->query('version_id');
+
+        if (! $versionId) {
+            return redirect()->route('library.index')
+                ->with('error', 'A version_id is required to compare responses.');
+        }
+
+        $version = PromptVersion::with(['prompt', 'creator'])->findOrFail($versionId);
+
+        $query = LibraryEntry::with(['provider', 'creator'])
+            ->where('prompt_version_id', $versionId)
+            ->orderByRaw('rating IS NULL, rating DESC')
+            ->orderBy('created_at');
+
+        if ($request->filled('ids')) {
+            $ids = array_filter(array_map('intval', explode(',', $request->query('ids'))));
+            if ($ids) {
+                $query->whereIn('id', $ids);
+            }
+        }
+
+        $entries = $query->get();
+
+        return view('library.compare', compact('version', 'entries'));
+    }
+
     public function show(LibraryEntry $library)
     {
         $library->load(['prompt', 'version', 'provider', 'creator']);

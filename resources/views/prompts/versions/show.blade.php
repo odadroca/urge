@@ -56,6 +56,21 @@
                     <p class="text-xs text-gray-500 mb-1.5 font-medium uppercase tracking-wider">Content</p>
                     <pre class="bg-gray-50 border border-gray-200 rounded p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto">{{ $version->content }}</pre>
                 </div>
+
+                <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <span class="text-sm text-gray-500">
+                        {{ $libraryCount }} {{ $libraryCount === 1 ? 'library entry' : 'library entries' }}
+                    </span>
+                    @if($libraryCount > 0)
+                    <a href="{{ route('library.compare', ['version_id' => $version->id]) }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md bg-white border-gray-300 text-gray-600 hover:bg-gray-50 transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12M8 12h8M8 17h12"/>
+                        </svg>
+                        {{ $libraryCount >= 2 ? 'Compare ' . $libraryCount . ' responses' : 'View library entry' }}
+                    </a>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

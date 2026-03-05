@@ -22,15 +22,48 @@ html.dark .bg-gray-900       { background-color: #020617 !important; }
 html.dark .shadow-sm         { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4) !important; }
 html.dark .shadow            { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.5) !important; }
 
-/* Text */
-html.dark .text-gray-900     { color: #f8fafc !important; }
-html.dark .text-gray-800     { color: #f1f5f9 !important; }
-html.dark .text-gray-700     { color: #e2e8f0 !important; }
-html.dark .text-gray-600     { color: #cbd5e1 !important; }
-html.dark .text-gray-500     { color: #94a3b8 !important; }
-html.dark .text-gray-400     { color: #64748b !important; }
-html.dark .text-gray-300     { color: #475569 !important; }
-html.dark .text-gray-200     { color: #334155 !important; }
+/* Text — gray scale */
+html.dark .text-gray-900     { color: #f8fafc !important; }  /* slate-50  */
+html.dark .text-gray-800     { color: #f1f5f9 !important; }  /* slate-100 */
+html.dark .text-gray-700     { color: #e2e8f0 !important; }  /* slate-200 */
+html.dark .text-gray-600     { color: #cbd5e1 !important; }  /* slate-300 */
+html.dark .text-gray-500     { color: #94a3b8 !important; }  /* slate-400 */
+html.dark .text-gray-400     { color: #94a3b8 !important; }  /* slate-400 — was slate-500 (too dark) */
+html.dark .text-gray-300     { color: #64748b !important; }  /* slate-500 — was slate-600 (too dark) */
+html.dark .text-gray-200     { color: #475569 !important; }  /* slate-600 — was slate-700 (near invisible) */
+
+/* Text — indigo (links, badges) */
+html.dark .text-indigo-600   { color: #818cf8 !important; }  /* indigo-400 */
+html.dark .text-indigo-700   { color: #a5b4fc !important; }  /* indigo-300 */
+html.dark .text-indigo-500   { color: #818cf8 !important; }  /* indigo-400 */
+
+/* Text — green (active badge, stat, success flash) */
+html.dark .text-green-600    { color: #4ade80 !important; }  /* green-400  */
+html.dark .text-green-700    { color: #4ade80 !important; }  /* green-400  */
+html.dark .text-green-800    { color: #86efac !important; }  /* green-300  */
+
+/* Text — blue (stat number, badges) */
+html.dark .text-blue-600     { color: #60a5fa !important; }  /* blue-400 */
+html.dark .text-blue-700     { color: #93c5fd !important; }  /* blue-300 */
+html.dark .text-blue-800     { color: #bfdbfe !important; }  /* blue-200 */
+
+/* Text — purple (stat number, tags) */
+html.dark .text-purple-600   { color: #c084fc !important; }  /* purple-400 */
+html.dark .text-purple-700   { color: #d8b4fe !important; }  /* purple-300 */
+html.dark .text-purple-400   { color: #c084fc !important; }  /* purple-400 */
+
+/* Text — yellow / amber (badges, notices) */
+html.dark .text-yellow-500   { color: #fde68a !important; }  /* yellow-200  — stars */
+html.dark .text-yellow-700   { color: #fbbf24 !important; }  /* amber-400   */
+html.dark .text-yellow-900   { color: #fde68a !important; }  /* yellow-200  */
+html.dark .text-amber-700    { color: #fbbf24 !important; }  /* amber-400   */
+
+/* Text — red (errors, danger, diff) */
+html.dark .text-red-400      { color: #f87171 !important; }  /* red-400 */
+html.dark .text-red-500      { color: #f87171 !important; }  /* red-400 */
+html.dark .text-red-600      { color: #f87171 !important; }  /* red-400 */
+html.dark .text-red-700      { color: #fca5a5 !important; }  /* red-300 */
+html.dark .text-red-800      { color: #fca5a5 !important; }  /* red-300 */
 
 /* Borders */
 html.dark .border-gray-100   { border-color: #1e293b !important; }
@@ -80,20 +113,36 @@ html.dark .hover\:bg-gray-50:hover.border { background-color: #263244 !important
 html.dark .ring-black          { --tw-ring-color: #334155 !important; }
 html.dark .ring-opacity-5      { --tw-ring-opacity: 1 !important; }
 
-/* Coloured badge backgrounds — lighten to stay visible on dark cards */
+/* Coloured badge / notice backgrounds */
 html.dark .bg-green-50         { background-color: #052e16 !important; }
 html.dark .bg-green-100        { background-color: #064e3b !important; }
 html.dark .bg-red-50           { background-color: #450a0a !important; }
+html.dark .bg-red-100          { background-color: #450a0a !important; }
 html.dark .bg-indigo-50        { background-color: #1e1b4b !important; }
+html.dark .bg-indigo-100       { background-color: #1e1b4b !important; }
 html.dark .bg-purple-50        { background-color: #2e1065 !important; }
 html.dark .bg-purple-100       { background-color: #3b0764 !important; }
 html.dark .bg-blue-50          { background-color: #172554 !important; }
+html.dark .bg-amber-50         { background-color: #451a03 !important; }
+html.dark .bg-yellow-50        { background-color: #422006 !important; }
+html.dark .bg-yellow-100       { background-color: #422006 !important; }
 
 /* Danger zone border accent */
 html.dark .border-red-300      { border-color: #991b1b !important; }
+html.dark .border-red-200      { border-color: #7f1d1d !important; }
 
-/* Success flash */
+/* Success / notice flash borders */
 html.dark .border-green-200    { border-color: #166534 !important; }
+html.dark .border-amber-200    { border-color: #92400e !important; }
+html.dark .border-yellow-300   { border-color: #92400e !important; }
+html.dark .border-yellow-200   { border-color: #78350f !important; }
+
+/* Badge borders (indigo, purple, blue) */
+html.dark .border-indigo-100   { border-color: #312e81 !important; }
+html.dark .border-indigo-200   { border-color: #3730a3 !important; }
+html.dark .border-purple-100   { border-color: #4a1d96 !important; }
+html.dark .border-purple-200   { border-color: #6b21a8 !important; }
+html.dark .border-blue-200     { border-color: #1e3a8a !important; }
 
 /* Pagination links */
 html.dark nav[aria-label="Pagination"] span,

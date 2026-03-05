@@ -49,6 +49,15 @@
                     <span>{{ $prompt->created_at->format('Y-m-d') }}</span>
                     <a href="{{ route('prompts.versions.index', $prompt) }}" class="text-indigo-600 hover:underline">Version history</a>
                     <a href="{{ route('prompt-runs.index', $prompt) }}" class="text-indigo-600 hover:underline">Run history</a>
+                    @if($prompt->activeVersion)
+                        @if($libraryCount >= 2)
+                            <a href="{{ route('library.compare', ['version_id' => $prompt->activeVersion->id]) }}" class="text-indigo-600 hover:underline">Compare {{ $libraryCount }} responses</a>
+                        @elseif($libraryCount === 1)
+                            <a href="{{ route('library.index', ['prompt_id' => $prompt->id]) }}" class="text-indigo-600 hover:underline">1 library entry</a>
+                        @else
+                            <span class="text-gray-400">No library entries yet</span>
+                        @endif
+                    @endif
                 </div>
             </div>
 

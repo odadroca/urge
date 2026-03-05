@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\LibraryEntry;
 use App\Models\Prompt;
 use Illuminate\Http\Request;
 
@@ -62,7 +63,12 @@ class PromptController extends Controller
     public function show(Prompt $prompt)
     {
         $prompt->load('activeVersion.creator', 'creator');
-        return view('prompts.show', compact('prompt'));
+
+        $libraryCount = $prompt->activeVersion
+            ? LibraryEntry::where('prompt_version_id', $prompt->activeVersion->id)->count()
+            : 0;
+
+        return view('prompts.show', compact('prompt', 'libraryCount'));
     }
 
     public function edit(Prompt $prompt)

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\LibraryEntry;
 use App\Models\Prompt;
 use App\Models\PromptVersion;
 use App\Services\VersioningService;
@@ -48,7 +49,9 @@ class PromptVersionController extends Controller
             ->with('creator')
             ->firstOrFail();
 
-        return view('prompts.versions.show', compact('prompt', 'version'));
+        $libraryCount = LibraryEntry::where('prompt_version_id', $version->id)->count();
+
+        return view('prompts.versions.show', compact('prompt', 'version', 'libraryCount'));
     }
 
     public function compare(Request $request, Prompt $prompt)
