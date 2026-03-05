@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URGE — Prompt Explorer v3</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-root: #0a0a0c;
+    --bg-surface: #111114;
+    --bg-card: #16161a;
+    --bg-card-hover: #1c1c21;
+    --bg-input: #111114;
+    --border: #2a2a30;
+    --border-focus: #5b5bd6;
+    --text-primary: #ececf1;
+    --text-secondary: #8e8ea0;
+    --text-muted: #565666;
+    --accent: #5b5bd6;
+    --accent-soft: rgba(91,91,214,0.12);
+    --accent-glow: rgba(91,91,214,0.25);
+    --green: #3dd68c;
+    --green-soft: rgba(61,214,140,0.1);
+    --orange: #f0a050;
+    --orange-soft: rgba(240,160,80,0.1);
+    --red: #e5484d;
+    --red-soft: rgba(229,72,77,0.1);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.3);
+    --transition: 180ms ease;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-root);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+  }
+
+  .topbar-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 18px;
+    letter-spacing: -0.5px;
+  }
+
+  .topbar-brand .logo {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #fff; font-weight: 700;
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+
+  .topbar-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-secondary);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px rgba(61,214,140,0.4);
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  .status-dot.disconnected { background: var(--text-muted); box-shadow: none; animation: none; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .topbar-actions { display: flex; gap: 8px; }
+
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--bg-card-hover); border-color: var(--text-muted); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #6e6ee0; }
+  .btn-ghost { background: transparent; border-color: transparent; }
+  .btn-ghost:hover { background: var(--bg-card); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-icon { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+
+  .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+  .sidebar {
+    width: 320px; min-width: 320px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    transition: border-color var(--transition);
+  }
+  .search-box:focus-within { border-color: var(--border-focus); }
+  .search-box svg { flex-shrink: 0; color: var(--text-muted); }
+  .search-box input {
+    flex: 1; background: none; border: none; outline: none;
+    font-family: inherit; font-size: 13px; color: var(--text-primary);
+    padding: 9px 0;
+  }
+  .search-box input::placeholder { color: var(--text-muted); }
+
+  .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+  .prompt-item {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-bottom: 2px;
+  }
+  .prompt-item:hover { background: var(--bg-card); }
+  .prompt-item.active { background: var(--accent-soft); }
+
+  .prompt-item-name {
+    font-weight: 600; font-size: 14px;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .prompt-item-slug { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  .prompt-item-meta {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 6px; font-size: 11px; color: var(--text-secondary);
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px; letter-spacing: 0.3px;
+  }
+  .badge-version { background: var(--accent-soft); color: var(--accent); }
+  .badge-var { background: var(--green-soft); color: var(--green); }
+  .badge-active { background: var(--green-soft); color: var(--green); }
+  .badge-inactive { background: var(--red-soft); color: var(--red); }
+  .badge-driver { background: var(--bg-root); color: var(--text-muted); border: 1px solid var(--border); font-size: 9px; padding: 1px 5px; }
+
+  .content-area { flex: 1; overflow-y: auto; padding: 32px 40px; }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; color: var(--text-muted);
+    text-align: center; gap: 16px;
+  }
+  .empty-state svg { opacity: 0.3; }
+  .empty-state p { font-size: 14px; max-width: 300px; line-height: 1.6; }
+
+  .detail-header {
+    margin-bottom: 28px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .detail-slug { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .detail-description { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px; }
+  .detail-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .tab-bar { display: flex; gap: 2px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+
+  .tab {
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    padding: 10px 16px; background: none; border: none;
+    color: var(--text-muted); cursor: pointer; transition: all var(--transition);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+  .code-block-wrapper {
+    position: relative; border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border); margin-bottom: 24px;
+  }
+
+  .code-block-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted);
+  }
+
+  .code-block {
+    padding: 18px 20px; background: var(--bg-root);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7;
+    color: var(--text-primary); white-space: pre-wrap; word-break: break-word;
+    overflow-x: auto; max-height: 500px; overflow-y: auto;
+  }
+
+  .code-block .var-highlight { color: var(--green); background: var(--green-soft); padding: 1px 4px; border-radius: 3px; }
+
+  .versions-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .versions-table th { text-align: left; padding: 10px 14px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  .versions-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+  .versions-table tr:last-child td { border-bottom: none; }
+  .versions-table tr:hover td { background: var(--bg-card); }
+  .versions-table .version-num { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--text-primary); }
+
+  .render-section { margin-top: 8px; }
+  .render-form { display: flex; flex-direction: column; gap: 16px; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+  .form-label code { font-family: 'JetBrains Mono', monospace; color: var(--green); }
+
+  .form-input {
+    font-family: inherit; font-size: 13px; padding: 9px 12px;
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text-primary);
+    outline: none; transition: border-color var(--transition);
+  }
+  .form-input:focus { border-color: var(--border-focus); }
+  .form-input::placeholder { color: var(--text-muted); }
+  textarea.form-input { min-height: 80px; resize: vertical; font-family: inherit; line-height: 1.5; }
+
+  .render-output { margin-top: 20px; }
+  .render-output-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .rendered-text { padding: 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; color: var(--text-primary); }
+
+  .missing-warning { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--orange-soft); border: 1px solid rgba(240,160,80,0.2); border-radius: var(--radius-sm); font-size: 13px; color: var(--orange); margin-bottom: 14px; }
+
+  .connect-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+
+  .connect-card {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 44px; width: 100%; max-width: 420px;
+    box-shadow: var(--shadow), 0 0 60px rgba(91,91,214,0.06);
+  }
+
+  .connect-card h1 { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
+  .connect-card h1 .logo { width: 34px; height: 34px; background: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; box-shadow: 0 0 20px var(--accent-glow); }
+  .connect-card p { color: var(--text-secondary); font-size: 14px; line-height: 1.5; margin-bottom: 28px; }
+
+  .connect-form { display: flex; flex-direction: column; gap: 16px; }
+  .connect-form .form-group label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; }
+  .connect-form .form-input { width: 100%; }
+
+  .connect-error { padding: 10px 14px; background: var(--red-soft); border: 1px solid rgba(229,72,77,0.2); border-radius: var(--radius-sm); font-size: 13px; color: var(--red); }
+  .connect-btn { width: 100%; padding: 11px; font-size: 14px; font-weight: 600; margin-top: 4px; }
+
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-center { display: flex; align-items: center; justify-content: center; padding: 60px; width: 100%; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 10px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-primary); box-shadow: var(--shadow); z-index: 100; animation: toastIn 0.3s ease; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+
+  @media (max-width: 768px) { .sidebar { width: 260px; min-width: 260px; } .content-area { padding: 24px 20px; } }
+
+  .fade-in { animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .modal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%; max-width: 560px;
+    max-height: 88vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+  }
+
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .modal-header h3 { font-size: 15px; font-weight: 600; }
+
+  .modal-body { flex: 1; overflow-y: auto; padding: 16px 24px; }
+
+  .modal-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .modal-note { font-size: 11px; color: var(--text-muted); margin-top: 12px; line-height: 1.5; }
+
+  /* ── Toggle switch ── */
+  .toggle-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .toggle-switch input { position: absolute; opacity: 0; pointer-events: none; }
+
+  .toggle-track {
+    width: 34px; height: 20px;
+    background: var(--bg-root);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    transition: background var(--transition), border-color var(--transition);
+    flex-shrink: 0;
+  }
+
+  .toggle-switch.on .toggle-track { background: var(--accent); border-color: var(--accent); }
+
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 12px; height: 12px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: transform var(--transition), background var(--transition);
+  }
+  .toggle-switch.on .toggle-thumb { transform: translateX(14px); background: #fff; }
+
+  /* ── Provider row in settings modal ── */
+  .provider-row {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+  .provider-row.row-enabled { border-color: rgba(91,91,214,0.35); }
+
+  .provider-row-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+  }
+
+  .provider-row-left { display: flex; align-items: center; gap: 10px; }
+  .provider-row-name { font-size: 14px; font-weight: 500; }
+
+  .provider-row-fields {
+    padding: 2px 16px 14px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+
+  .provider-row-fields .form-label { font-size: 11px; color: var(--text-muted); }
+  .provider-row-fields .form-input { font-size: 12px; padding: 7px 10px; }
+
+  /* ── Execute section ── */
+  .execute-section { display: flex; flex-direction: column; gap: 20px; }
+
+  .execute-section-label {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-muted); margin-bottom: 8px;
+  }
+
+  .execute-provider-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .execute-provider-check {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer; transition: all var(--transition);
+    font-size: 13px; user-select: none;
+  }
+  .execute-provider-check input { display: none; }
+  .execute-provider-check.selected { background: var(--accent-soft); border-color: rgba(91,91,214,0.45); }
+  .execute-provider-check:hover { border-color: var(--text-muted); }
+
+  .provider-model-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-muted);
+  }
+
+  .execute-no-providers {
+    padding: 16px 20px;
+    background: var(--orange-soft);
+    border: 1px solid rgba(240,160,80,0.2);
+    border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--orange);
+  }
+
+  /* ── Response grid & cards ── */
+  .response-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+
+  .response-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: border-color var(--transition);
+  }
+  .response-card.r-success { border-top: 2px solid var(--green); }
+  .response-card.r-error { border-top: 2px solid var(--red); }
+  .response-card.r-loading { border-top: 2px solid var(--accent); }
+
+  .response-card-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  .response-provider-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .response-model-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  .response-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .response-meta-item { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+  .status-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 4px;
+  }
+  .status-badge.sb-success { background: var(--green-soft); color: var(--green); }
+  .status-badge.sb-error { background: var(--red-soft); color: var(--red); }
+  .status-badge.sb-loading { background: var(--accent-soft); color: var(--accent); }
+
+  .response-card-body { flex: 1; padding: 16px; min-height: 80px; }
+
+  .response-text {
+    font-size: 13px; line-height: 1.7;
+    color: var(--text-primary);
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 420px; overflow-y: auto;
+  }
+
+  .response-error-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--red);
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  .response-card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-root);
+    gap: 8px;
+  }
+
+  .response-actions { display: flex; gap: 4px; }
+
+  /* ── Star rating ── */
+  .star-rating { display: flex; align-items: center; gap: 1px; }
+
+  .star {
+    font-size: 19px; color: var(--border);
+    cursor: pointer; transition: color var(--transition), transform var(--transition);
+    line-height: 1; padding: 0 1px;
+    user-select: none;
+  }
+  .star.filled { color: var(--orange); }
+  .star:hover { color: var(--orange); transform: scale(1.15); }
+
+  .rating-label { font-size: 11px; color: var(--text-muted); margin-left: 6px; }
+
+  /* ── Rendered prompt collapsible ── */
+  .rendered-prompt-toggle {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-muted);
+    cursor: pointer; margin-bottom: 8px;
+    background: none; border: none; padding: 0;
+    font-family: inherit;
+    transition: color var(--transition);
+  }
+  .rendered-prompt-toggle:hover { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+/* ── Icons ── */
+const Icon = {
+  Search: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+  Copy: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+  Play: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
+  Clock: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Disconnect: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18.36 6.64A9 9 0 0 1 20.77 15"/><path d="M6.16 6.16a9 9 0 1 0 12.68 12.68"/><line x1="2" y1="2" x2="22" y2="22"/></svg>,
+  Prompt: () => <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+  Refresh: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>,
+  Settings: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
+  Lightning: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  Download: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  ChevronRight: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>,
+  ChevronDown: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>,
+};
+
+/* ── Default provider configurations ── */
+const DEFAULT_PROVIDERS = [
+  { id: 'openai',    driver: 'openai',    name: 'OpenAI',    model: 'gpt-4o-mini',               apiKey: '', baseUrl: '',                       enabled: false },
+  { id: 'anthropic', driver: 'anthropic', name: 'Anthropic', model: 'claude-haiku-4-5-20251001',  apiKey: '', baseUrl: '',                       enabled: false },
+  { id: 'mistral',   driver: 'mistral',   name: 'Mistral',   model: 'mistral-small-latest',       apiKey: '', baseUrl: '',                       enabled: false },
+  { id: 'gemini',    driver: 'gemini',    name: 'Gemini',    model: 'gemini-1.5-flash',           apiKey: '', baseUrl: '',                       enabled: false },
+  { id: 'ollama',    driver: 'ollama',    name: 'Ollama',    model: 'llama3.2',                   apiKey: '', baseUrl: 'http://localhost:11434',  enabled: false },
+];
+
+function loadProviders() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('urge_providers') || '[]');
+    return DEFAULT_PROVIDERS.map(def => {
+      const saved = stored.find(s => s.id === def.id);
+      return saved ? { ...def, ...saved } : { ...def };
+    });
+  } catch {
+    return DEFAULT_PROVIDERS.map(p => ({ ...p }));
+  }
+}
+
+function saveProviders(providers) {
+  localStorage.setItem('urge_providers', JSON.stringify(providers));
+}
+
+/* ── URGE API helper ── */
+function createApi(baseUrl, apiKey) {
+  const headers = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+  };
+
+  return {
+    async list() {
+      const r = await fetch(`${baseUrl}/api/v1/prompts`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return unwrapList(json).map(normalizePrompt);
+    },
+    async get(slug) {
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return normalizePrompt(unwrap(json));
+    },
+    async versions(slug) {
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}/versions`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return unwrapList(json);
+    },
+    async getVersion(slug, version) {
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}/versions/${version}`, { headers });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return normalizePrompt(unwrap(json));
+    },
+    async render(slug, variables, version) {
+      const body = { variables };
+      if (version != null) body.version = version;
+      const r = await fetch(`${baseUrl}/api/v1/prompts/${slug}/render`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw await parseError(r);
+      const json = await r.json();
+      return unwrap(json);
+    },
+  };
+}
+
+async function parseError(r) {
+  try {
+    const data = await r.json();
+    return new Error(data.error?.message || data.message || `HTTP ${r.status}`);
+  } catch {
+    return new Error(`HTTP ${r.status}`);
+  }
+}
+
+function unwrap(data) { return data?.data ?? data; }
+
+function unwrapList(data) {
+  if (data?.data && Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data)) return data;
+  return data?.prompts || data?.data || [];
+}
+
+function normalizePrompt(p) {
+  if (!p) return p;
+  const v = p.version || {};
+  return {
+    ...p,
+    content: p.content || v.content || '',
+    variables: p.variables || v.variables || [],
+    active_version: p.active_version ?? v.version_number ?? null,
+    commit_message: p.commit_message || v.commit_message || '',
+    created_by: p.created_by || v.created_by || '',
+    created_at: p.created_at || v.created_at || '',
+  };
+}
+
+function highlightVars(text) {
+  if (!text) return text;
+  const parts = text.split(/({{[a-zA-Z_]\w*}})/g);
+  return parts.map((part, i) =>
+    part.startsWith('{{') && part.endsWith('}}')
+      ? <span key={i} className="var-highlight">{part}</span>
+      : part
+  );
+}
+
+/* ── LLM browser dispatch functions ── */
+
+async function callOpenAiCompatible(provider, promptText) {
+  const base = (provider.baseUrl || 'https://api.openai.com').replace(/\/+$/, '');
+  const start = Date.now();
+  const r = await fetch(`${base}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${provider.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: provider.model,
+      messages: [{ role: 'user', content: promptText }],
+    }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${r.status}`);
+  }
+  const data = await r.json();
+  return {
+    text: data.choices?.[0]?.message?.content || '',
+    modelUsed: data.model || provider.model,
+    inputTokens: data.usage?.prompt_tokens ?? null,
+    outputTokens: data.usage?.completion_tokens ?? null,
+    durationMs: Date.now() - start,
+  };
+}
+
+async function callAnthropic(provider, promptText) {
+  const start = Date.now();
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': provider.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: provider.model,
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: promptText }],
+    }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${r.status}`);
+  }
+  const data = await r.json();
+  return {
+    text: data.content?.[0]?.text || '',
+    modelUsed: data.model || provider.model,
+    inputTokens: data.usage?.input_tokens ?? null,
+    outputTokens: data.usage?.output_tokens ?? null,
+    durationMs: Date.now() - start,
+  };
+}
+
+async function callMistral(provider, promptText) {
+  return callOpenAiCompatible({ ...provider, baseUrl: 'https://api.mistral.ai' }, promptText);
+}
+
+async function callGemini(provider, promptText) {
+  const start = Date.now();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`;
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${r.status}`);
+  }
+  const data = await r.json();
+  return {
+    text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+    modelUsed: provider.model,
+    inputTokens: data.usageMetadata?.promptTokenCount ?? null,
+    outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
+    durationMs: Date.now() - start,
+  };
+}
+
+async function callOllama(provider, promptText) {
+  const base = (provider.baseUrl || 'http://localhost:11434').replace(/\/+$/, '');
+  const start = Date.now();
+  const r = await fetch(`${base}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: provider.model,
+      messages: [{ role: 'user', content: promptText }],
+      stream: false,
+    }),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
+  const data = await r.json();
+  return {
+    text: data.message?.content || '',
+    modelUsed: data.model || provider.model,
+    inputTokens: data.prompt_eval_count ?? null,
+    outputTokens: data.eval_count ?? null,
+    durationMs: Date.now() - start,
+  };
+}
+
+async function callProvider(provider, promptText) {
+  switch (provider.driver) {
+    case 'openai':    return callOpenAiCompatible(provider, promptText);
+    case 'anthropic': return callAnthropic(provider, promptText);
+    case 'mistral':   return callMistral(provider, promptText);
+    case 'gemini':    return callGemini(provider, promptText);
+    case 'ollama':    return callOllama(provider, promptText);
+    default: throw new Error(`Unknown driver: ${provider.driver}`);
+  }
+}
+
+/* ── Toast ── */
+function Toast({ message, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2200); return () => clearTimeout(t); }, []);
+  return <div className="toast">{message}</div>;
+}
+
+/* ── Connect screen ── */
+function ConnectScreen({ onConnect }) {
+  const [url, setUrl] = useState(localStorage.getItem('urge_url') || '');
+  const [key, setKey] = useState(localStorage.getItem('urge_key') || '');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    const cleanUrl = url.replace(/\/+$/, '');
+    if (!cleanUrl || !key) { setError('Both fields are required'); return; }
+    setLoading(true); setError('');
+    try {
+      const api = createApi(cleanUrl, key);
+      await api.list();
+      localStorage.setItem('urge_url', cleanUrl);
+      localStorage.setItem('urge_key', key);
+      onConnect(cleanUrl, key);
+    } catch (e) {
+      setError(e.message || 'Connection failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="connect-screen">
+      <div className="connect-card fade-in">
+        <h1><span className="logo">U</span> URGE</h1>
+        <p>Connect to your prompt management server to explore, render, and execute prompts against LLMs.</p>
+        {error && <div className="connect-error" style={{marginBottom:16}}>{error}</div>}
+        <div className="connect-form">
+          <div className="form-group">
+            <label>Server URL</label>
+            <input className="form-input" placeholder="https://prompts.example.com"
+              value={url} onChange={e => setUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          <div className="form-group">
+            <label>API Key</label>
+            <input className="form-input" type="password" placeholder="urge_..."
+              value={key} onChange={e => setKey(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+          </div>
+          <button className="btn btn-primary connect-btn" onClick={handleSubmit} disabled={loading}>
+            {loading ? <><div className="spinner" style={{width:14,height:14,borderWidth:2}}/> Connecting…</> : 'Connect'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Settings modal ── */
+function SettingsModal({ providers, onSave, onClose }) {
+  const [local, setLocal] = useState(() => providers.map(p => ({ ...p })));
+
+  const update = (id, field, value) => {
+    setLocal(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const handleSave = () => { onSave(local); onClose(); };
+
+  const handleOverlayClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+
+  return (
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal-card" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>LLM Provider Settings</h3>
+          <button className="btn btn-ghost btn-icon" onClick={onClose} style={{fontSize:18, lineHeight:1}}>×</button>
+        </div>
+
+        <div className="modal-body">
+          {local.map(p => (
+            <div key={p.id} className={`provider-row ${p.enabled ? 'row-enabled' : ''}`}>
+              <div className="provider-row-header" onClick={() => update(p.id, 'enabled', !p.enabled)}>
+                <div className="provider-row-left">
+                  <span className="badge badge-driver">{p.driver}</span>
+                  <span className="provider-row-name">{p.name}</span>
+                </div>
+                <label className={`toggle-switch ${p.enabled ? 'on' : ''}`} onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" checked={p.enabled} onChange={e => update(p.id, 'enabled', e.target.checked)} />
+                  <span className="toggle-track"><span className="toggle-thumb" /></span>
+                </label>
+              </div>
+
+              {p.enabled && (
+                <div className="provider-row-fields">
+                  <div className="form-group">
+                    <label className="form-label">Model</label>
+                    <input className="form-input" value={p.model}
+                      onChange={e => update(p.id, 'model', e.target.value)}
+                      placeholder="model identifier" />
+                  </div>
+                  {p.driver === 'ollama' ? (
+                    <div className="form-group">
+                      <label className="form-label">Base URL</label>
+                      <input className="form-input" value={p.baseUrl || ''}
+                        onChange={e => update(p.id, 'baseUrl', e.target.value)}
+                        placeholder="http://localhost:11434" />
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label className="form-label">API Key</label>
+                      <input className="form-input" type="password" value={p.apiKey || ''}
+                        onChange={e => update(p.id, 'apiKey', e.target.value)}
+                        placeholder="sk-..." autoComplete="new-password" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+          <p className="modal-note">
+            API keys are stored in browser localStorage only. Do not share this file after entering keys.
+            Ollama requires CORS enabled (<code style={{fontFamily:'monospace'}}>OLLAMA_ORIGINS=*</code>).
+          </p>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSave}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sidebar ── */
+function Sidebar({ prompts, selected, onSelect, search, onSearch, loading }) {
+  return (
+    <div className="sidebar">
+      <div className="sidebar-header">
+        <div className="search-box">
+          <Icon.Search />
+          <input placeholder="Search prompts…" value={search} onChange={e => onSearch(e.target.value)} />
+        </div>
+      </div>
+      <div className="sidebar-list">
+        {loading ? (
+          <div className="loading-center"><div className="spinner"/></div>
+        ) : prompts.length === 0 ? (
+          <div style={{padding:20,textAlign:'center',color:'var(--text-muted)',fontSize:13}}>
+            {search ? 'No prompts match your search' : 'No prompts found'}
+          </div>
+        ) : prompts.map(p => (
+          <div key={p.slug} className={`prompt-item ${selected === p.slug ? 'active' : ''}`}
+            onClick={() => onSelect(p.slug)}>
+            <div className="prompt-item-name">
+              {p.name}
+              {p.active_version != null && <span className="badge badge-version">v{p.active_version}</span>}
+            </div>
+            <div className="prompt-item-slug">{p.slug}</div>
+            {p.variables && p.variables.length > 0 && (
+              <div className="prompt-item-meta">
+                {p.variables.map(v => <span key={v} className="badge badge-var">{`{{${v}}}`}</span>)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Content tab ── */
+function ContentTab({ prompt, onCopy }) {
+  const content = prompt.content || '';
+  return (
+    <div className="fade-in">
+      <div className="code-block-wrapper">
+        <div className="code-block-header">
+          <span>prompt content</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => { navigator.clipboard.writeText(content); onCopy(); }}>
+            <Icon.Copy /> Copy
+          </button>
+        </div>
+        <div className="code-block">{highlightVars(content)}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Versions tab ── */
+function VersionsTab({ slug, api }) {
+  const [versions, setVersions] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedVersion, setSelectedVersion] = useState(null);
+  const [versionContent, setVersionContent] = useState(null);
+
+  useEffect(() => {
+    setLoading(true); setSelectedVersion(null); setVersionContent(null);
+    api.versions(slug).then(data => setVersions(data)).catch(() => setVersions([])).finally(() => setLoading(false));
+  }, [slug]);
+
+  const viewVersion = async (v) => {
+    const num = v.version ?? v.version_number ?? v.id;
+    setSelectedVersion(num);
+    try {
+      const data = await api.getVersion(slug, num);
+      setVersionContent(data.content || '');
+    } catch { setVersionContent('(failed to load)'); }
+  };
+
+  if (loading) return <div className="loading-center"><div className="spinner"/></div>;
+  if (!versions || versions.length === 0) return <div style={{color:'var(--text-muted)',fontSize:13}}>No version history found.</div>;
+
+  return (
+    <div className="fade-in">
+      <table className="versions-table">
+        <thead><tr><th>Version</th><th>Message</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {versions.map((v, i) => {
+            const num = v.version ?? v.version_number ?? v.id ?? i + 1;
+            const isActive = v.is_active || v.active || false;
+            return (
+              <tr key={num}>
+                <td className="version-num">v{num}</td>
+                <td>{v.commit_message || v.message || '—'}</td>
+                <td>{isActive ? <span className="badge badge-active">active</span> : <span style={{color:'var(--text-muted)'}}>—</span>}</td>
+                <td><button className="btn btn-ghost btn-sm" onClick={() => viewVersion(v)}>View</button></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {selectedVersion != null && versionContent != null && (
+        <div style={{marginTop:20}} className="fade-in">
+          <div className="code-block-wrapper">
+            <div className="code-block-header"><span>v{selectedVersion} content</span></div>
+            <div className="code-block">{highlightVars(versionContent)}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Render tab ── */
+function RenderTab({ prompt, api }) {
+  const vars = prompt.variables || [];
+  const [values, setValues] = useState(() => { const i = {}; vars.forEach(v => i[v] = ''); return i; });
+  const [result, setResult] = useState(null);
+  const [missing, setMissing] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const init = {};
+    (prompt.variables || []).forEach(v => init[v] = '');
+    setValues(init); setResult(null); setMissing([]); setError('');
+  }, [prompt.slug]);
+
+  const handleRender = async () => {
+    setLoading(true); setError(''); setResult(null); setMissing([]);
+    try {
+      const data = await api.render(prompt.slug, values);
+      setResult(data.rendered || data.content || '');
+      setMissing(data.variables_missing || []);
+    } catch (e) {
+      setError(e.message || 'Render failed');
+    } finally { setLoading(false); }
+  };
+
+  if (vars.length === 0) {
+    return (
+      <div className="fade-in">
+        <p style={{color:'var(--text-muted)', fontSize:13, marginBottom:16}}>
+          This prompt has no variables. Click render to see the output.
+        </p>
+        <button className="btn btn-primary" onClick={handleRender} disabled={loading}>
+          {loading ? <div className="spinner" style={{width:14,height:14,borderWidth:2}}/> : <Icon.Play />} Render
+        </button>
+        {result != null && (
+          <div className="render-output fade-in">
+            <div className="render-output-label">Rendered Output</div>
+            <div className="rendered-text">{result}</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="render-section fade-in">
+      <div className="render-form">
+        {vars.map(v => (
+          <div key={v} className="form-group">
+            <label className="form-label"><code>{`{{${v}}}`}</code></label>
+            <textarea className="form-input" rows="2"
+              placeholder={`Enter value for ${v}…`}
+              value={values[v] || ''}
+              onChange={e => setValues(prev => ({...prev, [v]: e.target.value}))} />
+          </div>
+        ))}
+        <div>
+          <button className="btn btn-primary" onClick={handleRender} disabled={loading}>
+            {loading ? <div className="spinner" style={{width:14,height:14,borderWidth:2}}/> : <Icon.Play />} Render Prompt
+          </button>
+        </div>
+      </div>
+      {error && <div className="connect-error" style={{marginTop:16}}>{error}</div>}
+      {result != null && (
+        <div className="render-output fade-in">
+          {missing.length > 0 && (
+            <div className="missing-warning">⚠ Missing variables: {missing.join(', ')}</div>
+          )}
+          <div className="render-output-label">Rendered Output</div>
+          <div className="rendered-text">{result}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Star rating ── */
+function StarRating({ value, onChange }) {
+  const [hover, setHover] = useState(0);
+  const active = hover || value || 0;
+  return (
+    <div className="star-rating">
+      {[1,2,3,4,5].map(n => (
+        <span key={n}
+          className={`star ${n <= active ? 'filled' : ''}`}
+          onClick={() => onChange(n === value ? null : n)}
+          onMouseEnter={() => setHover(n)}
+          onMouseLeave={() => setHover(0)}
+          title={`${n} star${n > 1 ? 's' : ''}`}>★</span>
+      ))}
+      {value && <span className="rating-label">{value}/5</span>}
+    </div>
+  );
+}
+
+/* ── Response card ── */
+function ResponseCard({ response, prompt, rendered, variables, onRatingChange, onCopy }) {
+  const exportMd = () => {
+    const varLines = Object.entries(variables || {})
+      .filter(([, v]) => v)
+      .map(([k, v]) => `- **${k}**: ${v}`)
+      .join('\n');
+
+    const ts = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const parts = [
+      `# ${prompt.name} — ${response.modelUsed || response.model}`,
+      '',
+      `**Executed:** ${ts}`,
+    ];
+
+    if (varLines) parts.push('', '**Variables:**', varLines);
+    parts.push('', '---', '', '## Prompt', '', rendered || '', '', '---', '', '## Response', '', response.text || '');
+
+    if (response.rating) parts.push('', `*Rating: ${response.rating}/5*`);
+    if (response.inputTokens != null) parts.push(`*Tokens: ${response.inputTokens} in / ${response.outputTokens ?? 0} out*`);
+    if (response.durationMs != null) parts.push(`*Duration: ${(response.durationMs / 1000).toFixed(1)}s*`);
+
+    const blob = new Blob([parts.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${prompt.slug}-${response.name.toLowerCase().replace(/\s+/g, '-')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const statusClass = `r-${response.status}`;
+  const badgeClass = `sb-${response.status}`;
+
+  return (
+    <div className={`response-card ${statusClass} fade-in`}>
+      <div className="response-card-header">
+        <div>
+          <div className="response-provider-name">{response.name}</div>
+          <div className="response-model-label">{response.modelUsed || response.model}</div>
+        </div>
+        <div className="response-meta">
+          {response.durationMs != null && (
+            <span className="response-meta-item">{(response.durationMs / 1000).toFixed(1)}s</span>
+          )}
+          {response.inputTokens != null && (
+            <span className="response-meta-item">{response.inputTokens}↑ {response.outputTokens ?? '?'}↓</span>
+          )}
+          <span className={`status-badge ${badgeClass}`}>{response.status}</span>
+        </div>
+      </div>
+
+      <div className="response-card-body">
+        {response.status === 'loading' && (
+          <div className="loading-center" style={{padding:30}}>
+            <div className="spinner" />
+          </div>
+        )}
+        {response.status === 'error' && (
+          <div className="response-error-text">{response.error || 'Unknown error'}</div>
+        )}
+        {response.status === 'success' && (
+          <div className="response-text">{response.text}</div>
+        )}
+      </div>
+
+      {response.status === 'success' && (
+        <div className="response-card-footer">
+          <StarRating
+            value={response.rating}
+            onChange={r => onRatingChange(response.providerId, r)}
+          />
+          <div className="response-actions">
+            <button className="btn btn-ghost btn-sm" onClick={() => { navigator.clipboard.writeText(response.text || ''); onCopy(); }}>
+              <Icon.Copy /> Copy
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={exportMd}>
+              <Icon.Download /> .md
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Execute tab ── */
+function ExecuteTab({ prompt, api, providers }) {
+  const vars = prompt.variables || [];
+  const enabledProviders = providers.filter(p => p.enabled);
+
+  const [values, setValues] = useState(() => { const i = {}; vars.forEach(v => i[v] = ''); return i; });
+  const [selectedIds, setSelectedIds] = useState(() => new Set(enabledProviders.map(p => p.id)));
+  const [executing, setExecuting] = useState(false);
+  const [rendered, setRendered] = useState(null);
+  const [responses, setResponses] = useState([]);
+  const [error, setError] = useState('');
+  const [showRendered, setShowRendered] = useState(false);
+
+  // Reset when prompt slug changes
+  useEffect(() => {
+    const init = {};
+    (prompt.variables || []).forEach(v => init[v] = '');
+    setValues(init);
+    setRendered(null); setResponses([]); setError(''); setShowRendered(false);
+  }, [prompt.slug]);
+
+  // Keep selected IDs in sync when providers change (e.g. after settings save)
+  useEffect(() => {
+    const enabledSet = new Set(providers.filter(p => p.enabled).map(p => p.id));
+    setSelectedIds(prev => new Set([...prev].filter(id => enabledSet.has(id))));
+    // Auto-select newly enabled providers
+    providers.filter(p => p.enabled).forEach(p => {
+      setSelectedIds(prev => new Set([...prev, p.id]));
+    });
+  }, [providers]);
+
+  const toggleProvider = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleExecute = async () => {
+    const selected = enabledProviders.filter(p => selectedIds.has(p.id));
+    if (selected.length === 0) { setError('Select at least one provider'); return; }
+    setExecuting(true); setError(''); setRendered(null); setResponses([]);
+
+    let renderedText;
+    try {
+      const renderData = await api.render(prompt.slug, values);
+      renderedText = renderData.rendered || renderData.content || '';
+      setRendered(renderedText);
+    } catch (e) {
+      setError('Render failed: ' + (e.message || 'Unknown error'));
+      setExecuting(false);
+      return;
+    }
+
+    setExecuting(false);
+
+    // Initialize response cards
+    const initResponses = selected.map(p => ({
+      providerId: p.id,
+      name: p.name,
+      driver: p.driver,
+      model: p.model,
+      status: 'loading',
+      text: null, modelUsed: null,
+      inputTokens: null, outputTokens: null,
+      durationMs: null, error: null, rating: null,
+    }));
+    setResponses(initResponses);
+
+    // Dispatch concurrently — update each card as it resolves
+    selected.forEach(async (p) => {
+      try {
+        const result = await callProvider(p, renderedText);
+        setResponses(prev => prev.map(r =>
+          r.providerId === p.id
+            ? { ...r, status: 'success', text: result.text, modelUsed: result.modelUsed, inputTokens: result.inputTokens, outputTokens: result.outputTokens, durationMs: result.durationMs }
+            : r
+        ));
+      } catch (e) {
+        setResponses(prev => prev.map(r =>
+          r.providerId === p.id ? { ...r, status: 'error', error: e.message } : r
+        ));
+      }
+    });
+  };
+
+  const handleRatingChange = (providerId, rating) => {
+    setResponses(prev => prev.map(r => r.providerId === providerId ? { ...r, rating } : r));
+  };
+
+  if (enabledProviders.length === 0) {
+    return (
+      <div className="fade-in">
+        <div className="execute-no-providers">
+          No LLM providers are enabled. Click the <strong>⚙ Settings</strong> button in the top bar to configure providers.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="execute-section fade-in">
+      {/* Variable inputs */}
+      {vars.length > 0 && (
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          {vars.map(v => (
+            <div key={v} className="form-group">
+              <label className="form-label"><code>{`{{${v}}}`}</code></label>
+              <textarea className="form-input" rows="2"
+                placeholder={`Enter value for ${v}…`}
+                value={values[v] || ''}
+                onChange={e => setValues(prev => ({...prev, [v]: e.target.value}))} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Provider selection */}
+      <div>
+        <div className="execute-section-label">Providers</div>
+        <div className="execute-provider-grid">
+          {enabledProviders.map(p => (
+            <label key={p.id} className={`execute-provider-check ${selectedIds.has(p.id) ? 'selected' : ''}`}>
+              <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleProvider(p.id)} />
+              <span>{p.name}</span>
+              <span className="provider-model-hint">{p.model}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Execute button */}
+      <div>
+        <button className="btn btn-primary" onClick={handleExecute}
+          disabled={executing || selectedIds.size === 0}>
+          {executing
+            ? <><div className="spinner" style={{width:14,height:14,borderWidth:2}}/> Rendering…</>
+            : <><Icon.Lightning /> Execute</>}
+        </button>
+      </div>
+
+      {error && <div className="connect-error">{error}</div>}
+
+      {/* Rendered prompt collapsible */}
+      {rendered && (
+        <div>
+          <button className="rendered-prompt-toggle" onClick={() => setShowRendered(v => !v)}>
+            {showRendered ? <Icon.ChevronDown /> : <Icon.ChevronRight />}
+            Rendered prompt
+          </button>
+          {showRendered && (
+            <div className="rendered-text fade-in" style={{fontSize:13, fontFamily:"'JetBrains Mono', monospace", lineHeight:1.6}}>
+              {rendered}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Response cards */}
+      {responses.length > 0 && (
+        <div className="response-grid">
+          {responses.map(r => (
+            <ResponseCard
+              key={r.providerId}
+              response={r}
+              prompt={prompt}
+              rendered={rendered}
+              variables={values}
+              onRatingChange={handleRatingChange}
+              onCopy={() => {/* toast handled by parent via prop if needed */}}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Detail view ── */
+function DetailView({ slug, api, providers, onCopy }) {
+  const [prompt, setPrompt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('content');
+
+  useEffect(() => {
+    setLoading(true); setTab('content');
+    api.get(slug).then(setPrompt).catch(() => setPrompt(null)).finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) return <div className="loading-center"><div className="spinner"/></div>;
+  if (!prompt) return <div style={{color:'var(--red)',padding:40}}>Failed to load prompt.</div>;
+
+  const vars = prompt.variables || [];
+
+  return (
+    <div className="fade-in">
+      <div className="detail-header">
+        <div className="detail-title">{prompt.name}</div>
+        <div className="detail-slug">{prompt.slug}</div>
+        {prompt.description && <div className="detail-description">{prompt.description}</div>}
+        <div className="detail-badges">
+          {prompt.active_version != null && <span className="badge badge-version">v{prompt.active_version}</span>}
+          {vars.map(v => <span key={v} className="badge badge-var">{`{{${v}}}`}</span>)}
+        </div>
+      </div>
+
+      <div className="tab-bar">
+        <button className={`tab ${tab === 'content'  ? 'active' : ''}`} onClick={() => setTab('content')}>Content</button>
+        <button className={`tab ${tab === 'versions' ? 'active' : ''}`} onClick={() => setTab('versions')}>Versions</button>
+        <button className={`tab ${tab === 'render'   ? 'active' : ''}`} onClick={() => setTab('render')}>Render</button>
+        <button className={`tab ${tab === 'execute'  ? 'active' : ''}`} onClick={() => setTab('execute')}>
+          Execute {providers.filter(p => p.enabled).length > 0 && <span className="badge badge-version" style={{marginLeft:4}}>{providers.filter(p => p.enabled).length}</span>}
+        </button>
+      </div>
+
+      {tab === 'content'  && <ContentTab prompt={prompt} onCopy={onCopy} />}
+      {tab === 'versions' && <VersionsTab slug={slug} api={api} />}
+      {tab === 'render'   && <RenderTab prompt={prompt} api={api} />}
+      {tab === 'execute'  && <ExecuteTab prompt={prompt} api={api} providers={providers} />}
+    </div>
+  );
+}
+
+/* ── App ── */
+function App() {
+  const [connected, setConnected] = useState(false);
+  const [api, setApi] = useState(null);
+  const [serverUrl, setServerUrl] = useState('');
+  const [prompts, setPrompts] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [listLoading, setListLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [providers, setProviders] = useState(() => loadProviders());
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const handleConnect = useCallback((url, key) => {
+    const a = createApi(url, key);
+    setApi(a); setServerUrl(url); setConnected(true);
+    setListLoading(true);
+    a.list().then(data => setPrompts(data)).catch(() => setPrompts([])).finally(() => setListLoading(false));
+  }, []);
+
+  const handleDisconnect = () => {
+    setConnected(false); setApi(null); setPrompts([]);
+    setSelected(null); setSearch('');
+    localStorage.removeItem('urge_url');
+    localStorage.removeItem('urge_key');
+  };
+
+  const refreshList = () => {
+    if (!api) return;
+    setListLoading(true);
+    api.list().then(data => setPrompts(data)).catch(() => {}).finally(() => setListLoading(false));
+  };
+
+  const handleSaveProviders = (updated) => {
+    saveProviders(updated);
+    setProviders(updated);
+  };
+
+  const showToast = (msg) => setToast(msg);
+
+  useEffect(() => {
+    const url = localStorage.getItem('urge_url');
+    const key = localStorage.getItem('urge_key');
+    if (url && key) handleConnect(url, key);
+  }, []);
+
+  const filtered = prompts.filter(p => {
+    const q = search.toLowerCase();
+    return !q || (p.name||'').toLowerCase().includes(q) || (p.slug||'').toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q);
+  });
+
+  if (!connected) return <ConnectScreen onConnect={handleConnect} />;
+
+  const enabledCount = providers.filter(p => p.enabled).length;
+
+  return (
+    <div id="app">
+      <div className="topbar">
+        <div className="topbar-brand">
+          <span className="logo">U</span>
+          URGE
+        </div>
+        <div className="topbar-status">
+          <span className="status-dot" />
+          <span>{serverUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}</span>
+          <span style={{color:'var(--text-muted)'}}>·</span>
+          <span>{prompts.length} prompt{prompts.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="topbar-actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => setSettingsOpen(true)}
+            title="LLM Provider Settings"
+            style={enabledCount > 0 ? {borderColor:'rgba(91,91,214,0.4)', color:'var(--accent)'} : {}}>
+            <Icon.Settings />
+            {enabledCount > 0 ? `${enabledCount} provider${enabledCount > 1 ? 's' : ''}` : 'Settings'}
+          </button>
+          <button className="btn btn-ghost btn-icon" onClick={refreshList} title="Refresh">
+            <Icon.Refresh />
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={handleDisconnect}>
+            <Icon.Disconnect /> Disconnect
+          </button>
+        </div>
+      </div>
+
+      <div className="main-layout">
+        <Sidebar prompts={filtered} selected={selected} onSelect={setSelected}
+          search={search} onSearch={setSearch} loading={listLoading} />
+        <div className="content-area">
+          {selected ? (
+            <DetailView slug={selected} api={api} providers={providers} onCopy={() => showToast('Copied to clipboard')} />
+          ) : (
+            <div className="empty-state">
+              <Icon.Prompt />
+              <p>Select a prompt from the sidebar to view its content, version history, render, or execute it with LLMs.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {settingsOpen && (
+        <SettingsModal
+          providers={providers}
+          onSave={handleSaveProviders}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>
