@@ -53,6 +53,7 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
+                            <th class="px-6 py-3 w-8"></th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
@@ -69,6 +70,14 @@
                                 <svg x-bind:class="open ? 'rotate-90' : ''" class="w-4 h-4 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
+                            </td>
+                            <td class="px-3 py-4" @click.stop>
+                                <a href="{{ route('prompts.show', $prompt) }}" title="View" class="text-gray-400 hover:text-indigo-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                </a>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="text-indigo-600 font-medium">{{ $prompt->name }}</span>
@@ -111,13 +120,12 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-400">{{ $prompt->created_at->format('Y-m-d') }}</td>
-                            <td class="px-6 py-4 text-right text-sm font-medium space-x-3" @click.stop>
-                                <a href="{{ route('prompts.show', $prompt) }}" class="text-indigo-600 hover:text-indigo-800">View</a>
+                            <td class="px-6 py-4 text-right text-sm font-medium" @click.stop>
                                 <a href="{{ route('prompts.versions.index', $prompt) }}" class="text-gray-500 hover:text-gray-700">History</a>
                             </td>
                         </tr>
                         <tr x-show="open" x-cloak class="bg-gray-50 border-b border-gray-100">
-                            <td></td>
+                            <td colspan="2"></td>
                             <td colspan="6" class="px-6 py-4">
                                 @if($prompt->activeVersion)
                                     @if($prompt->activeVersion->variables && count($prompt->activeVersion->variables))

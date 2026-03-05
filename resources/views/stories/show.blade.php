@@ -28,7 +28,7 @@
             @else
             <div class="space-y-4">
                 @foreach($story->steps as $i => $step)
-                <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden" x-data="{ open: false }">
+                <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden" x-data="{ open: false, copied: false }">
 
                     {{-- Collapsed header --}}
                     <button type="button"
@@ -73,7 +73,19 @@
                         {{-- Prompt content --}}
                         <div>
                             <p class="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2">Prompt</p>
-                            <pre class="bg-gray-50 border border-gray-200 rounded p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-72 leading-relaxed">{{ $step->version->content }}</pre>
+                            <div class="relative">
+                                <pre x-ref="promptContent" class="bg-gray-50 border border-gray-200 rounded p-4 pr-24 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-72 leading-relaxed">{{ $step->version->content }}</pre>
+                                <button
+                                    @click.stop="navigator.clipboard.writeText($refs.promptContent.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)"
+                                    class="absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded border transition"
+                                    :class="copied ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400'">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" stroke-linecap="round"/>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/>
+                                    </svg>
+                                    <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                                </button>
+                            </div>
                         </div>
 
                         {{-- Library response --}}
