@@ -19,13 +19,23 @@ class VersioningService
 
             $variables = $this->templateEngine->extractVariables($data['content']);
 
+            // Filter metadata to only include variables that exist in content
+            $metadata = $data['variable_metadata'] ?? null;
+            if ($metadata) {
+                $metadata = array_intersect_key($metadata, array_flip($variables));
+                if (empty($metadata)) {
+                    $metadata = null;
+                }
+            }
+
             return PromptVersion::create([
-                'prompt_id'      => $prompt->id,
-                'version_number' => $nextNumber,
-                'content'        => $data['content'],
-                'commit_message' => $data['commit_message'] ?? null,
-                'variables'      => $variables,
-                'created_by'     => $author->id,
+                'prompt_id'         => $prompt->id,
+                'version_number'    => $nextNumber,
+                'content'           => $data['content'],
+                'commit_message'    => $data['commit_message'] ?? null,
+                'variables'         => $variables,
+                'variable_metadata' => $metadata,
+                'created_by'        => $author->id,
             ]);
         });
     }

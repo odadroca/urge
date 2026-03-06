@@ -8,7 +8,7 @@
         </div>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12" x-data="versionForm()">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 <form method="POST" action="{{ route('prompts.versions.store', $prompt) }}">
@@ -18,11 +18,46 @@
                             Prompt Content <span class="text-red-500">*</span>
                         </label>
                         <p class="text-xs text-gray-400 mb-2">Use <code class="font-mono bg-gray-100 px-1 rounded">&#123;&#123;variable_name&#125;&#125;</code> for placeholders. Variables will be extracted automatically.</p>
-                        <textarea name="content" id="content" rows="16" required
+                        <textarea name="content" id="content" rows="16" required x-model="content" @input="detectVariables()"
                             class="w-full font-mono text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 @error('content') border-red-300 @enderror"
                         >{{ old('content', $latest?->content) }}</textarea>
                         @error('content')<p class="mt-1 text-sm text-red-500">{{ $message }}</p>@enderror
                     </div>
+
+                    {{-- Variable metadata --}}
+                    <div class="mb-5" x-show="variables.length > 0" x-cloak>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Variable Metadata <span class="text-gray-400 font-normal">(optional)</span></label>
+                        <div class="space-y-3 border border-gray-200 rounded-md p-4 bg-gray-50">
+                            <template x-for="v in variables" :key="v">
+                                <div class="grid grid-cols-12 gap-2 items-start">
+                                    <div class="col-span-2">
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-mono bg-indigo-50 text-indigo-700 border border-indigo-200" x-text="'{{' + v + '}}'"></span>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <select :name="'variable_metadata[' + v + '][type]'" class="w-full text-xs border-gray-300 rounded-md">
+                                            <option value="">Type...</option>
+                                            <option value="string" :selected="getMetaValue(v, 'type') === 'string'">string</option>
+                                            <option value="text" :selected="getMetaValue(v, 'type') === 'text'">text</option>
+                                            <option value="enum" :selected="getMetaValue(v, 'type') === 'enum'">enum</option>
+                                            <option value="number" :selected="getMetaValue(v, 'type') === 'number'">number</option>
+                                            <option value="boolean" :selected="getMetaValue(v, 'type') === 'boolean'">boolean</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-span-3">
+                                        <input type="text" :name="'variable_metadata[' + v + '][default]'" placeholder="Default value"
+                                            :value="getMetaValue(v, 'default')"
+                                            class="w-full text-xs border-gray-300 rounded-md">
+                                    </div>
+                                    <div class="col-span-5">
+                                        <input type="text" :name="'variable_metadata[' + v + '][description]'" placeholder="Description"
+                                            :value="getMetaValue(v, 'description')"
+                                            class="w-full text-xs border-gray-300 rounded-md">
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                     <div class="mb-6">
                         <label for="commit_message" class="block text-sm font-medium text-gray-700 mb-1">Commit Message</label>
                         <input type="text" name="commit_message" id="commit_message" value="{{ old('commit_message') }}" maxlength="500"
@@ -38,4 +73,30 @@
             </div>
         </div>
     </div>
+
+    <script>
+    function versionForm() {
+        const prevMetadata = @json($latest?->variable_metadata ?? (object)[]);
+        return {
+            content: @json(old('content', $latest?->content ?? '')),
+            variables: [],
+            prevMetadata: prevMetadata || {},
+            init() {
+                this.detectVariables();
+            },
+            detectVariables() {
+                const pattern = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+                const found = new Set();
+                let match;
+                while ((match = pattern.exec(this.content)) !== null) {
+                    found.add(match[1]);
+                }
+                this.variables = [...found];
+            },
+            getMetaValue(varName, field) {
+                return this.prevMetadata[varName]?.[field] ?? '';
+            }
+        };
+    }
+    </script>
 </x-app-layout>

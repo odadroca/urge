@@ -29,6 +29,11 @@ API keys are created and managed through the web UI under **API Keys**.
 | 401 | `INVALID_API_KEY` | Token not found in the database |
 | 401 | `EXPIRED_API_KEY` | Key exists but its expiry date has passed |
 | 401 | `KEY_OWNER_NOT_FOUND` | The user who owned this key has been deleted |
+| 403 | `KEY_SCOPE_DENIED` | The API key is scoped and does not have access to the requested prompt |
+
+### Prompt-scoped API keys
+
+API keys can optionally be scoped to specific prompts. A scoped key can only access the prompts it has been granted. Accessing any other prompt returns `403 KEY_SCOPE_DENIED`. An unscoped key (no prompts assigned) can access all prompts.
 
 ---
 
@@ -117,6 +122,7 @@ All errors follow this shape:
 | 200 | Success |
 | 401 | Unauthenticated |
 | 404 | Resource not found |
+| 403 | Forbidden (scoped key) |
 | 422 | Validation error |
 | 429 | Rate limit exceeded |
 | 500 | Server error |
@@ -128,11 +134,18 @@ All errors follow this shape:
 
 ### List prompts
 
-Returns all prompts that have an active version set. Archived (soft-deleted) prompts are excluded.
+Returns all prompts that have an active version set. Archived (soft-deleted) prompts are excluded. Results are cursor-paginated.
 
 ```
 GET /api/v1/prompts
 ```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `per_page` | integer | `25` | Number of results per page (1–100) |
+| `cursor` | string | — | Cursor token for the next page |
+
+If the API key is scoped to specific prompts, only those prompts are returned.
 
 **Response 200**
 
@@ -145,11 +158,31 @@ GET /api/v1/prompts
       "slug": "support-reply",
       "description": "Generates a polite support response.",
       "active_version": 2,
-      "variables": ["customer_name", "issue", "product"],
+      "variables": ["customer_name", "issue"],
+      "tags": ["support", "customer"],
+      "variable_metadata": {
+        "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
+        "issue": {"type": "string", "description": "The issue description", "default": null}
+      },
       "created_at": "2026-03-05T08:34:35.000000Z"
     }
-  ]
+  ],
+  "meta": {
+    "per_page": 25,
+    "next_cursor": "eyJpZCI6MjUsIl9wb2ludHNUb05leHRJdGVtcyI6dHJ1ZX0",
+    "prev_cursor": null
+  }
 }
+```
+
+To fetch all pages, follow `meta.next_cursor` until it is `null`:
+
+```bash
+# First page
+curl -s -H "Authorization: Bearer $KEY" "$BASE/api/v1/prompts?per_page=100"
+
+# Next page (if next_cursor is not null)
+curl -s -H "Authorization: Bearer $KEY" "$BASE/api/v1/prompts?per_page=100&cursor=$NEXT_CURSOR"
 ```
 
 ---
@@ -181,6 +214,10 @@ GET /api/v1/prompts/{slug}
       "content": "Dear {{customer_name}}, thank you for contacting us about {{issue}}.",
       "commit_message": "Softened tone",
       "variables": ["customer_name", "issue"],
+      "variable_metadata": {
+        "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
+        "issue": {"type": "string", "description": "The issue description", "default": null}
+      },
       "created_by": "Alice",
       "created_at": "2026-03-05T09:00:00.000000Z"
     }
@@ -209,6 +246,10 @@ GET /api/v1/prompts/{slug}/versions
       "version_number": 2,
       "commit_message": "Softened tone",
       "variables": ["customer_name", "issue"],
+      "variable_metadata": {
+        "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
+        "issue": {"type": "string", "description": "The issue description", "default": null}
+      },
       "created_by": "Alice",
       "created_at": "2026-03-05T09:00:00.000000Z",
       "is_active": true
@@ -217,6 +258,7 @@ GET /api/v1/prompts/{slug}/versions
       "version_number": 1,
       "commit_message": "Initial version",
       "variables": ["customer_name", "issue"],
+      "variable_metadata": null,
       "created_by": "Alice",
       "created_at": "2026-03-05T08:34:35.000000Z",
       "is_active": false
@@ -257,6 +299,10 @@ GET /api/v1/prompts/{slug}/versions/{version_number}
       "content": "Dear {{customer_name}}, thank you for reaching out about {{issue}}.",
       "commit_message": "Initial version",
       "variables": ["customer_name", "issue"],
+      "variable_metadata": {
+        "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
+        "issue": {"type": "string", "description": "The issue description", "default": null}
+      },
       "created_by": "Alice",
       "created_at": "2026-03-05T08:34:35.000000Z",
       "is_active": false
@@ -293,7 +339,8 @@ Content-Type: application/json
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `variables` | object | No | Key-value pairs to substitute into the prompt |
-| `version` | integer | No | Specific version number to render. Defaults to the active version. |
+| `version` | integer | No | Specific version number to render. Takes precedence over `environment`. Defaults to the active version. |
+| `environment` | string | No | Named environment (e.g. `staging`, `production`) whose assigned version should be rendered. Ignored if `version` is also set. |
 
 **Response 200**
 
@@ -309,9 +356,22 @@ Content-Type: application/json
 }
 ```
 
+**Variable defaults**
+
+If a variable has metadata with a `default` value and the variable is not provided in the request, the default value is used automatically. The variable will appear in `variables_used`, not `variables_missing`.
+
+**Environment resolution**
+
+The version to render is resolved with this priority:
+1. Explicit `version` number (if provided)
+2. `environment` name → the version assigned to that environment
+3. The prompt's active version
+
+If an `environment` is specified but does not exist for the prompt, the API returns `404` with code `ENVIRONMENT_NOT_FOUND`.
+
 **Behaviour for missing variables**
 
-If a variable is present in the prompt content but not provided in the request, the placeholder is **left unreplaced** in the rendered output. The missing variable names are listed in `variables_missing`. The response is still `200` — it is up to the consumer to decide how to handle gaps.
+If a variable is present in the prompt content but not provided in the request and has no default, the placeholder is **left unreplaced** in the rendered output. The missing variable names are listed in `variables_missing`. The response is still `200` — it is up to the consumer to decide how to handle gaps.
 
 ```json
 {
@@ -418,5 +478,8 @@ curl -X POST https://your-domain.com/api/v1/prompts/support-reply/render \
 
 - The API is **read-only**. Creating or editing prompts is done through the web UI only.
 - API keys inherit the role of their owner. All roles (admin, editor, viewer) have identical API access.
-- The API does not implement pagination. All prompts are returned in a single response.
+- API keys may be **scoped to specific prompts**. A scoped key receives `403 KEY_SCOPE_DENIED` when accessing prompts outside its scope.
+- The list endpoint uses **cursor-based pagination**. Follow `meta.next_cursor` to iterate through all pages.
+- **Variable metadata** (type, description, default) is included in prompt and version responses when present. Defaults are applied automatically during rendering.
+- **Environments** allow different named stages (e.g. `production`, `staging`) to point to different versions. Use the `environment` field in the render request.
 - **Archived prompts** (soft-deleted via the web UI) are invisible to all API endpoints. Fetching an archived prompt by slug returns `404`. Admins can restore archived prompts through the web UI.

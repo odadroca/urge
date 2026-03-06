@@ -16,12 +16,13 @@ class VersionController extends ApiController
         }
 
         $versions = $prompt->versions()->with('creator')->get()->map(fn ($v) => [
-            'version_number' => $v->version_number,
-            'commit_message' => $v->commit_message,
-            'variables'      => $v->variables ?? [],
-            'created_by'     => $v->creator?->name,
-            'created_at'     => $v->created_at,
-            'is_active'      => $prompt->active_version_id === $v->id,
+            'version_number'    => $v->version_number,
+            'commit_message'    => $v->commit_message,
+            'variables'         => $v->variables ?? [],
+            'variable_metadata' => $v->variable_metadata,
+            'created_by'        => $v->creator?->name,
+            'created_at'        => $v->created_at,
+            'is_active'         => $prompt->active_version_id === $v->id,
         ]);
 
         return $this->success($versions->values());
@@ -47,14 +48,15 @@ class VersionController extends ApiController
             'slug'           => $prompt->slug,
             'description'    => $prompt->description,
             'version'        => [
-                'id'             => $version->id,
-                'version_number' => $version->version_number,
-                'content'        => $version->content,
-                'commit_message' => $version->commit_message,
-                'variables'      => $version->variables ?? [],
-                'created_by'     => $version->creator?->name,
-                'created_at'     => $version->created_at,
-                'is_active'      => $prompt->active_version_id === $version->id,
+                'id'                => $version->id,
+                'version_number'    => $version->version_number,
+                'content'           => $version->content,
+                'commit_message'    => $version->commit_message,
+                'variables'         => $version->variables ?? [],
+                'variable_metadata' => $version->variable_metadata,
+                'created_by'        => $version->creator?->name,
+                'created_at'        => $version->created_at,
+                'is_active'         => $prompt->active_version_id === $version->id,
             ],
         ]);
     }

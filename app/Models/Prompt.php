@@ -57,4 +57,9 @@ class Prompt extends Model
     {
         return $this->hasMany(PromptRun::class)->orderByDesc('created_at');
     }
+
+    public function environments()
+    {
+        return $this->hasMany(PromptEnvironment::class);
+    }
 }

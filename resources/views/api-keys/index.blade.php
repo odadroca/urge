@@ -23,7 +23,7 @@
             </div>
             @endif
 
-            @if(session('success') && !session('new_key'))
+            @if(session('success'))
                 <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
             @endif
 
@@ -39,6 +39,7 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Key</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scope</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Used</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires</th>
                             <th class="relative px-6 py-3"></th>
@@ -54,11 +55,24 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 font-mono text-sm text-gray-500">{{ $key->key_preview }}</td>
+                            <td class="px-6 py-4 text-sm">
+                                @if($key->prompts->isEmpty())
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">All prompts</span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">{{ $key->prompts->count() }} prompt{{ $key->prompts->count() !== 1 ? 's' : '' }}</span>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 text-sm text-gray-500">{{ $key->last_used_at?->diffForHumans() ?? 'Never' }}</td>
                             <td class="px-6 py-4 text-sm text-gray-500">{{ $key->expires_at?->format('Y-m-d') ?? 'Never' }}</td>
-                            <td class="px-6 py-4 text-right">
+                            <td class="px-6 py-4 text-right space-x-2">
+                                @can('rotate', $key)
+                                <form method="POST" action="{{ route('api-keys.rotate', $key) }}" class="inline" onsubmit="return confirm('Rotate this key? A new key will be generated and the old key will expire in {{ config('urge.key_rotation_overlap_hours') }} hours.')">
+                                    @csrf
+                                    <button type="submit" class="text-indigo-600 hover:underline text-sm">Rotate</button>
+                                </form>
+                                @endcan
                                 @can('delete', $key)
-                                <form method="POST" action="{{ route('api-keys.destroy', $key) }}" onsubmit="return confirm('Revoke this key?')">
+                                <form method="POST" action="{{ route('api-keys.destroy', $key) }}" class="inline" onsubmit="return confirm('Revoke this key?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-red-600 hover:underline text-sm">Revoke</button>
                                 </form>

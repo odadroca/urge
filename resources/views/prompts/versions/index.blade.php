@@ -122,6 +122,58 @@
             @if($versions->count() >= 2)
             <p class="text-xs text-gray-400 text-center">Check two versions to compare them.</p>
             @endif
+
+            {{-- Environments --}}
+            @if($versions->isNotEmpty())
+            @can('activateVersion', $prompt)
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                <h3 class="font-semibold text-gray-800 mb-3">Environments</h3>
+                <div class="space-y-3">
+                    @foreach($environments as $env)
+                    <div class="flex items-center justify-between bg-gray-50 rounded-md px-4 py-2">
+                        <div>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">{{ $env->name }}</span>
+                            <span class="text-sm text-gray-500 ml-2">
+                                @php $envVersion = $versions->firstWhere('id', $env->prompt_version_id); @endphp
+                                {{ $envVersion ? 'v' . $envVersion->version_number : 'unassigned' }}
+                            </span>
+                        </div>
+                        <form method="POST" action="{{ route('prompts.environments.assign', $prompt) }}" class="flex items-center gap-2">
+                            @csrf
+                            <input type="hidden" name="environment_name" value="{{ $env->name }}">
+                            <select name="version_id" class="text-xs border-gray-300 rounded-md">
+                                @foreach($versions as $v)
+                                <option value="{{ $v->id }}" {{ $env->prompt_version_id === $v->id ? 'selected' : '' }}>v{{ $v->version_number }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit" class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Assign</button>
+                        </form>
+                    </div>
+                    @endforeach
+
+                    {{-- Add new environment --}}
+                    <form method="POST" action="{{ route('prompts.environments.assign', $prompt) }}" class="flex items-center gap-2 pt-2 border-t border-gray-200">
+                        @csrf
+                        <input type="text" name="environment_name" placeholder="New environment name" required
+                            class="text-xs border-gray-300 rounded-md flex-1" list="env-suggestions">
+                        <datalist id="env-suggestions">
+                            @foreach(config('urge.default_environments', []) as $envName)
+                                @if(!$environments->contains('name', $envName))
+                                <option value="{{ $envName }}">
+                                @endif
+                            @endforeach
+                        </datalist>
+                        <select name="version_id" class="text-xs border-gray-300 rounded-md">
+                            @foreach($versions as $v)
+                            <option value="{{ $v->id }}">v{{ $v->version_number }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">Add</button>
+                    </form>
+                </div>
+            </div>
+            @endcan
+            @endif
         </div>
     </div>
 </x-app-layout>

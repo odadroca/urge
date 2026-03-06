@@ -12,16 +12,21 @@ class TemplateEngine
         return array_values(array_unique($matches[1]));
     }
 
-    public function render(string $content, array $variables): array
+    public function render(string $content, array $variables, ?array $metadata = null): array
     {
         $missing = [];
         $used = [];
 
-        $rendered = preg_replace_callback(self::PATTERN, function ($matches) use ($variables, &$missing, &$used) {
+        $rendered = preg_replace_callback(self::PATTERN, function ($matches) use ($variables, $metadata, &$missing, &$used) {
             $name = $matches[1];
             if (array_key_exists($name, $variables)) {
                 $used[] = $name;
                 return $variables[$name];
+            }
+            // Check for default in metadata
+            if ($metadata && isset($metadata[$name]['default']) && $metadata[$name]['default'] !== null) {
+                $used[] = $name;
+                return $metadata[$name]['default'];
             }
             $missing[] = $name;
             return $matches[0];

@@ -57,7 +57,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');
     Route::get('api-keys/create', [ApiKeyController::class, 'create'])->name('api-keys.create');
     Route::post('api-keys', [ApiKeyController::class, 'store'])->name('api-keys.store');
+    Route::post('api-keys/{apiKey}/rotate', [ApiKeyController::class, 'rotate'])->name('api-keys.rotate');
     Route::delete('api-keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api-keys.destroy');
+
+    // Prompt environment assignments
+    Route::post('prompts/{prompt}/environments', [PromptVersionController::class, 'assignEnvironment'])
+        ->name('prompts.environments.assign');
 
     // Prompt runs
     Route::get('prompts/{prompt}/runs', [PromptRunController::class, 'index'])->name('prompt-runs.index');
