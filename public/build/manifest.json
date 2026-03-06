@@ -1,0 +1,17 @@
+{
+  "C:/#DATA/Onedrive/Apps/URGE/resources/css/app.css": {
+    "file": "assets/app-r_p56t3I.css",
+    "src": "C:/#DATA/Onedrive/Apps/URGE/resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "C:/#DATA/Onedrive/Apps/URGE/resources/js/app.js": {
+    "file": "assets/app-CYSoDwka.js",
+    "name": "app",
+    "src": "C:/#DATA/Onedrive/Apps/URGE/resources/js/app.js",
+    "isEntry": true
+  }
+}

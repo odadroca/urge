@@ -52,6 +52,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('prompts.versions.show');
     Route::post('prompts/{prompt}/versions/{version}/activate', [PromptVersionController::class, 'activate'])
         ->name('prompts.versions.activate');
+    Route::get('prompts/{prompt}/versions/{version}/compose', [PromptVersionController::class, 'compose'])
+        ->name('prompts.versions.compose');
 
     // API keys
     Route::get('api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');
@@ -89,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('stories', StoryController::class);
     Route::post('stories/{story}/steps', [StoryStepController::class, 'store'])->name('story-steps.store');
     Route::delete('stories/{story}/steps/{step}', [StoryStepController::class, 'destroy'])->name('story-steps.destroy');
+    Route::patch('stories/{story}/steps/{step}', [StoryStepController::class, 'update'])->name('story-steps.update');
     Route::post('stories/{story}/steps/{step}/move-up', [StoryStepController::class, 'moveUp'])->name('story-steps.move-up');
     Route::post('stories/{story}/steps/{step}/move-down', [StoryStepController::class, 'moveDown'])->name('story-steps.move-down');
 

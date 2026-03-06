@@ -29,6 +29,19 @@ class StoryStepController extends Controller
             ->with('success', 'Step added.');
     }
 
+    public function update(Request $request, Story $story, StoryStep $step)
+    {
+        $validated = $request->validate([
+            'library_entry_id' => ['nullable', 'exists:library_entries,id'],
+            'notes'            => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $step->update($validated);
+
+        return redirect()->route('stories.edit', $story)
+            ->with('success', 'Step updated.');
+    }
+
     public function destroy(Story $story, StoryStep $step)
     {
         $step->delete();

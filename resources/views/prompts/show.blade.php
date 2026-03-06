@@ -131,6 +131,65 @@
                         <span x-text="copied ? 'Copied!' : 'Copy'"></span>
                     </button>
                 </div>
+
+                @if($prompt->activeVersion->includes && count($prompt->activeVersion->includes))
+                <div class="mt-4"
+                     x-data="{
+                         open: true, loading: false, composed: null, includes: [], error: null, copied: false,
+                         async load() {
+                             this.loading = true;
+                             try {
+                                 const r = await fetch('{{ route('prompts.versions.compose', [$prompt, $prompt->activeVersion->version_number]) }}');
+                                 const d = await r.json();
+                                 if (d.error) { this.error = d.error; } else { this.composed = d.composed; this.includes = d.includes; }
+                             } catch { this.error = 'Failed to load composed content.'; }
+                             this.loading = false;
+                         }
+                     }"
+                     x-init="load()">
+                    <div class="flex items-center gap-3 mb-2">
+                        <button @click="open = !open"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md transition"
+                                :class="open ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/>
+                            </svg>
+                            <span x-text="loading ? 'Resolving…' : (open ? 'Hide composed' : 'Preview composed')">Preview composed</span>
+                        </button>
+                    </div>
+
+                    <div x-show="open">
+                        <template x-if="loading">
+                            <div class="bg-emerald-50 border border-emerald-200 rounded p-4 text-sm text-emerald-600 italic animate-pulse">Resolving includes…</div>
+                        </template>
+                        <template x-if="error">
+                            <p class="text-sm text-red-500 italic" x-text="error"></p>
+                        </template>
+                        <template x-if="composed !== null && !error">
+                            <div x-data="{ copied: false }">
+                                <div class="flex flex-wrap gap-1.5 mb-2">
+                                    <template x-for="slug in includes" :key="slug">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-emerald-50 text-emerald-600 border border-emerald-200" x-text="slug + ' inlined'"></span>
+                                    </template>
+                                </div>
+                                <div class="relative">
+                                    <pre x-ref="composedContent" class="bg-emerald-50 border border-emerald-200 rounded p-4 pr-24 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-96" x-text="composed"></pre>
+                                    <button
+                                        @click="navigator.clipboard.writeText($refs.composedContent.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)"
+                                        class="absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded border transition"
+                                        :class="copied ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400'">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" stroke-linecap="round"/>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/>
+                                        </svg>
+                                        <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                @endif
             </div>
             @else
             <div class="bg-white shadow-sm sm:rounded-lg p-6 text-center text-gray-500">

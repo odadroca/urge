@@ -7,12 +7,13 @@ use App\Models\LibraryEntry;
 use App\Models\Prompt;
 use App\Models\PromptEnvironment;
 use App\Models\PromptVersion;
+use App\Services\TemplateEngine;
 use App\Services\VersioningService;
 use Illuminate\Http\Request;
 
 class PromptVersionController extends Controller
 {
-    public function __construct(private VersioningService $versioning) {}
+    public function __construct(private VersioningService $versioning, private TemplateEngine $engine) {}
 
     public function index(Prompt $prompt)
     {
@@ -25,7 +26,20 @@ class PromptVersionController extends Controller
     {
         $this->authorize('createVersion', $prompt);
         $latest = $prompt->versions()->first();
-        return view('prompts.versions.create', compact('prompt', 'latest'));
+
+        $allPrompts = Prompt::whereNull('deleted_at')
+            ->where('id', '!=', $prompt->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+
+        $knownVariables = PromptVersion::whereNotNull('variables')
+            ->pluck('variables')
+            ->flatten()
+            ->unique()
+            ->sort()
+            ->values();
+
+        return view('prompts.versions.create', compact('prompt', 'latest', 'allPrompts', 'knownVariables'));
     }
 
     public function store(Request $request, Prompt $prompt)
@@ -161,6 +175,23 @@ class PromptVersionController extends Controller
         return redirect()
             ->route('prompts.versions.index', $prompt)
             ->with('success', "Environment '{$data['environment_name']}' updated.");
+    }
+
+    public function compose(Prompt $prompt, int $versionNumber)
+    {
+        $version = $prompt->versions()
+            ->where('version_number', $versionNumber)
+            ->firstOrFail();
+
+        try {
+            $result = $this->engine->render($version->content, [], $version->variable_metadata);
+            return response()->json([
+                'composed'  => $result['rendered'],
+                'includes'  => $result['includes_resolved'],
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
     }
 
     public function activate(Prompt $prompt, int $versionNumber)
