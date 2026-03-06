@@ -92,11 +92,11 @@ Every change to prompt content is saved as a new, immutable version. Versions ar
 ### Creating a new version
 
 1. Open a prompt and click **New Version**.
-2. Write or paste the prompt content. Use `{{variable_name}}` for any values you want to fill in at call time.
+2. Write or paste the prompt content. Use `{{variable_name}}` for placeholders and `{{>slug}}` to include another prompt (see [Prompt Composition](#prompt-composition) below).
 3. Add an optional commit message describing what changed.
 4. Click **Save Version**.
 
-Variables are extracted automatically — you will see them listed as badges.
+Variables and includes are extracted automatically — you will see them listed as badges.
 
 ### Variable metadata
 
@@ -127,6 +127,38 @@ Click **History** on any prompt to see all versions in reverse chronological ord
 ### Comparing versions
 
 On the version history page, check the boxes next to any two versions and click **View diff** to see a side-by-side comparison of their content.
+
+### Prompt Composition
+
+Prompts can include the content of other prompts using the `{{>slug}}` syntax. This avoids repeating shared content (like system rules or tone guidelines) across multiple prompts.
+
+**How it works:**
+
+- Write `{{>my-other-prompt}}` anywhere in your prompt content.
+- When the prompt is rendered (via the API), the include tag is replaced with the active version content of the referenced prompt.
+- Includes are recursive — an included prompt can itself include other prompts.
+- Variables are shared across all levels. For example, if a parent prompt passes `tone`, it is available in all included content.
+- The version create form shows detected includes as green badges with clickable links to the included prompts.
+
+**Example:**
+
+Create a prompt called "System Rules" with slug `system-rules`:
+```
+You are a helpful assistant. Always be polite and concise.
+```
+
+Then reference it in another prompt:
+```
+{{>system-rules}}
+
+Dear {{customer_name}}, here is the answer to your question about {{topic}}.
+```
+
+When rendered, the `{{>system-rules}}` tag is replaced with the full content of `system-rules`.
+
+**Environment propagation:** When rendering with an environment (e.g. `staging`), included prompts also use their staging version if one is assigned.
+
+**Circular references** are detected and will return an error. The maximum include depth is 10 by default (configurable via `URGE_MAX_INCLUDE_DEPTH`).
 
 ### Environments
 
@@ -231,5 +263,6 @@ Click your name in the top-right corner and select **Profile** to:
 - **Use environments for staged rollouts.** Assign a new version to `staging` first, test it, then assign it to `production` when ready.
 - **Scope API keys for security.** If an application only needs one prompt, scope its key to that prompt. This limits the blast radius if the key is compromised.
 - **Rotate keys instead of revoking.** The overlap window gives you time to update applications without downtime.
+- **Use includes for shared content.** Extract common instructions (system rules, tone guidelines, formatting rules) into their own prompts and include them with `{{>slug}}`. Changes to the included prompt automatically propagate to all prompts that reference it.
 - **Add variable metadata.** Descriptions and defaults help both human authors and API consumers understand what each variable expects.
 - **Viewer role for read-only consumers.** If you want a team member to be able to browse and copy prompts without being able to edit them, assign them the `viewer` role.

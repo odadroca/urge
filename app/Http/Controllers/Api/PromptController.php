@@ -42,6 +42,7 @@ class PromptController extends ApiController
             'active_version'    => $p->activeVersion?->version_number,
             'variables'         => $p->activeVersion?->variables ?? [],
             'variable_metadata' => $p->activeVersion?->variable_metadata,
+            'includes'          => $p->activeVersion?->includes ?? [],
             'created_at'        => $p->created_at,
         ]);
 
@@ -111,9 +112,14 @@ class PromptController extends ApiController
 
         // Merge defaults from variable metadata
         $variables = $validated['variables'] ?? [];
-        $result = $this->engine->render($version->content, $variables, $version->variable_metadata);
 
-        return $this->success([
+        try {
+            $result = $this->engine->render($version->content, $variables, $version->variable_metadata, $environment);
+        } catch (\RuntimeException $e) {
+            return $this->error('INCLUDE_ERROR', $e->getMessage(), 422);
+        }
+
+        $response = [
             'rendered'          => $result['rendered'],
             'prompt_slug'       => $slug,
             'version_number'    => $version->version_number,
@@ -121,7 +127,13 @@ class PromptController extends ApiController
             'variables_used'    => $result['variables_used'],
             'variables_missing' => $result['variables_missing'],
             'variable_metadata' => $version->variable_metadata,
-        ]);
+        ];
+
+        if (!empty($result['includes_resolved'])) {
+            $response['includes_resolved'] = $result['includes_resolved'];
+        }
+
+        return $this->success($response);
     }
 
     private function formatPromptWithVersion(Prompt $prompt, $version): array
@@ -138,6 +150,7 @@ class PromptController extends ApiController
                 'commit_message'    => $version->commit_message,
                 'variables'         => $version->variables ?? [],
                 'variable_metadata' => $version->variable_metadata,
+                'includes'          => $version->includes ?? [],
                 'created_by'        => $version->creator?->name,
                 'created_at'        => $version->created_at,
             ],

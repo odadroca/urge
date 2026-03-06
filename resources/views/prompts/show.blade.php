@@ -106,6 +106,18 @@
                 </div>
                 @endif
 
+                @if($prompt->activeVersion->includes && count($prompt->activeVersion->includes))
+                <div class="mb-4">
+                    <p class="text-xs text-gray-500 mb-1">Includes</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach($prompt->activeVersion->includes as $inclSlug)
+                        <a href="{{ route('prompts.show', $inclSlug) }}"
+                           class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">&#123;&#123;&gt;{{ $inclSlug }}&#125;&#125;</a>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 <div x-data="{ copied: false }" class="relative">
                     <pre x-ref="content" class="bg-gray-50 border border-gray-200 rounded p-4 pr-24 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-96">{{ $prompt->activeVersion->content }}</pre>
                     <button

@@ -18,6 +18,7 @@ class VersioningService
             $nextNumber = ($maxVersion ?? 0) + 1;
 
             $variables = $this->templateEngine->extractVariables($data['content']);
+            $includes = $this->templateEngine->extractIncludes($data['content']);
 
             // Filter metadata to only include variables that exist in content
             $metadata = $data['variable_metadata'] ?? null;
@@ -35,6 +36,7 @@ class VersioningService
                 'commit_message'    => $data['commit_message'] ?? null,
                 'variables'         => $variables,
                 'variable_metadata' => $metadata,
+                'includes'          => !empty($includes) ? $includes : null,
                 'created_by'        => $author->id,
             ]);
         });

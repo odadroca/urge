@@ -164,6 +164,7 @@ If the API key is scoped to specific prompts, only those prompts are returned.
         "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
         "issue": {"type": "string", "description": "The issue description", "default": null}
       },
+      "includes": [],
       "created_at": "2026-03-05T08:34:35.000000Z"
     }
   ],
@@ -218,6 +219,7 @@ GET /api/v1/prompts/{slug}
         "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
         "issue": {"type": "string", "description": "The issue description", "default": null}
       },
+      "includes": [],
       "created_by": "Alice",
       "created_at": "2026-03-05T09:00:00.000000Z"
     }
@@ -250,6 +252,7 @@ GET /api/v1/prompts/{slug}/versions
         "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
         "issue": {"type": "string", "description": "The issue description", "default": null}
       },
+      "includes": [],
       "created_by": "Alice",
       "created_at": "2026-03-05T09:00:00.000000Z",
       "is_active": true
@@ -303,6 +306,7 @@ GET /api/v1/prompts/{slug}/versions/{version_number}
         "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
         "issue": {"type": "string", "description": "The issue description", "default": null}
       },
+      "includes": [],
       "created_by": "Alice",
       "created_at": "2026-03-05T08:34:35.000000Z",
       "is_active": false
@@ -405,6 +409,69 @@ Rules:
 
 ---
 
+## Prompt Composition (Includes)
+
+Prompts can include other prompts using the include syntax:
+
+```
+{{>slug}}
+```
+
+When a prompt containing `{{>slug}}` is rendered, the include tag is replaced with the active version content of the referenced prompt. Includes are resolved **before** variable substitution, so variables from included prompts are available for replacement.
+
+### Rules
+
+- `slug` must match a valid prompt slug: `[a-zA-Z0-9_-]+`
+- Includes are **recursive** — an included prompt can itself include other prompts
+- **Circular references** are detected and return `422 INCLUDE_ERROR`
+- **Max depth** defaults to 10 (configurable via `URGE_MAX_INCLUDE_DEPTH`)
+- If an included slug does not exist or has no active version, the tag is left as-is in the output
+- **Environment propagation** — if you render with `"environment": "staging"`, included prompts also use their `staging` version (if available, otherwise their active version)
+- Variables are **shared** across all levels — a variable passed to the parent prompt is available in all included content
+
+### Example
+
+Given three prompts:
+
+- `system-rules` (active content): `You are a helpful assistant. Always be polite.`
+- `tone-guide` (active content): `Respond in a {{tone}} tone.`
+- `support-reply` (active content):
+
+```
+{{>system-rules}}
+{{>tone-guide}}
+
+Dear {{customer_name}}, thank you for contacting us about {{issue}}.
+```
+
+Rendering `support-reply` with `{"customer_name": "Alice", "issue": "billing", "tone": "friendly"}` produces:
+
+```
+You are a helpful assistant. Always be polite.
+Respond in a friendly tone.
+
+Dear Alice, thank you for contacting us about billing.
+```
+
+### Render response with includes
+
+When includes are resolved, the response includes an `includes_resolved` field listing all slugs that were expanded:
+
+```json
+{
+  "data": {
+    "rendered": "You are a helpful assistant. Always be polite.\nRespond in a friendly tone.\n\nDear Alice, thank you for contacting us about billing.",
+    "prompt_slug": "support-reply",
+    "version_number": 1,
+    "variables_used": ["customer_name", "issue", "tone"],
+    "variables_missing": [],
+    "includes_resolved": ["system-rules", "tone-guide"]
+  }
+}
+```
+
+---
+
 ## Usage Examples
 
 ### Fetch and render a prompt (curl)
@@ -482,4 +549,5 @@ curl -X POST https://your-domain.com/api/v1/prompts/support-reply/render \
 - The list endpoint uses **cursor-based pagination**. Follow `meta.next_cursor` to iterate through all pages.
 - **Variable metadata** (type, description, default) is included in prompt and version responses when present. Defaults are applied automatically during rendering.
 - **Environments** allow different named stages (e.g. `production`, `staging`) to point to different versions. Use the `environment` field in the render request.
+- **Prompt composition** via `{{>slug}}` allows including one prompt's content inside another. Includes are resolved recursively during rendering. Circular references return `422 INCLUDE_ERROR`.
 - **Archived prompts** (soft-deleted via the web UI) are invisible to all API endpoints. Fetching an archived prompt by slug returns `404`. Admins can restore archived prompts through the web UI.

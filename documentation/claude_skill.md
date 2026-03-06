@@ -122,7 +122,7 @@ curl -s -X POST \
   "$BASE/api/v1/prompts/$SLUG/render"
 ```
 
-Display the `rendered` text prominently. If `variables_missing` is non-empty, warn the user which placeholders were not filled and show the rendered text with the unreplaced `{{placeholder}}` still visible.
+Display the `rendered` text prominently. If `variables_missing` is non-empty, warn the user which placeholders were not filled and show the rendered text with the unreplaced `{{placeholder}}` still visible. If `includes_resolved` is present in the response, mention which prompts were included.
 
 If the user says "render X with name=Alice and issue=billing", extract the variables from the message and skip asking.
 
@@ -163,6 +163,7 @@ Same as render, but pass `"version": N` in the request body. Version pinning tak
 | 401 `EXPIRED_API_KEY` | The key has expired — generate a new one in the URGE web UI |
 | 403 `KEY_SCOPE_DENIED` | The API key does not have access to this prompt — the key may be scoped to specific prompts |
 | 404 `NOT_FOUND` | The prompt slug or version number does not exist |
+| 422 `INCLUDE_ERROR` | Circular include detected or max include depth exceeded |
 | 404 `ENVIRONMENT_NOT_FOUND` | The specified environment does not exist for this prompt |
 | 429 `RATE_LIMITED` | Too many requests — wait and retry after the `Retry-After` header value |
 
@@ -170,11 +171,14 @@ For any 5xx error, suggest the user check whether the URGE server is running.
 
 ---
 
-## Variable syntax reminder
+## Template syntax reminder
 
-Prompts use `{{variable_name}}` placeholders. Variable names contain only letters, digits, and underscores, starting with a letter or underscore.
+Prompts use two special syntaxes:
 
-Variables may have metadata (type, default, description) attached by prompt authors. When displaying a prompt, show this metadata to help the user understand what each variable expects.
+- **Variables**: `{{variable_name}}` — placeholders replaced with provided values. Names contain only letters, digits, and underscores, starting with a letter or underscore.
+- **Includes**: `{{>slug}}` — includes the active content of another prompt by its slug. Includes are resolved recursively before variable substitution, so variables from included prompts are available.
+
+Variables may have metadata (type, default, description) attached by prompt authors. When displaying a prompt, show this metadata to help the user understand what each variable expects. If a prompt has `includes`, mention which prompts it references.
 
 ---
 

@@ -20,6 +20,7 @@ class VersionController extends ApiController
             'commit_message'    => $v->commit_message,
             'variables'         => $v->variables ?? [],
             'variable_metadata' => $v->variable_metadata,
+            'includes'          => $v->includes ?? [],
             'created_by'        => $v->creator?->name,
             'created_at'        => $v->created_at,
             'is_active'         => $prompt->active_version_id === $v->id,

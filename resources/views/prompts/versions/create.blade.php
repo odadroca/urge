@@ -17,11 +17,24 @@
                         <label for="content" class="block text-sm font-medium text-gray-700 mb-1">
                             Prompt Content <span class="text-red-500">*</span>
                         </label>
-                        <p class="text-xs text-gray-400 mb-2">Use <code class="font-mono bg-gray-100 px-1 rounded">&#123;&#123;variable_name&#125;&#125;</code> for placeholders. Variables will be extracted automatically.</p>
+                        <p class="text-xs text-gray-400 mb-2">Use <code class="font-mono bg-gray-100 px-1 rounded">&#123;&#123;variable_name&#125;&#125;</code> for placeholders. Use <code class="font-mono bg-gray-100 px-1 rounded">&#123;&#123;&gt;slug&#125;&#125;</code> to include another prompt. Variables and includes are detected automatically.</p>
                         <textarea name="content" id="content" rows="16" required x-model="content" @input="detectVariables()"
                             class="w-full font-mono text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 @error('content') border-red-300 @enderror"
                         >{{ old('content', $latest?->content) }}</textarea>
                         @error('content')<p class="mt-1 text-sm text-red-500">{{ $message }}</p>@enderror
+                    </div>
+
+                    {{-- Detected includes --}}
+                    <div class="mb-5" x-show="includes.length > 0" x-cloak>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Includes</label>
+                        <div class="flex flex-wrap gap-1.5">
+                            <template x-for="slug in includes" :key="slug">
+                                <a :href="'/prompts/' + slug" target="_blank"
+                                   class="inline-flex items-center px-2.5 py-1 rounded text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">
+                                    <span x-text="'{{>' + slug + '}}'"></span>
+                                </a>
+                            </template>
+                        </div>
                     </div>
 
                     {{-- Variable metadata --}}
@@ -80,18 +93,25 @@
         return {
             content: @json(old('content', $latest?->content ?? '')),
             variables: [],
+            includes: [],
             prevMetadata: prevMetadata || {},
             init() {
                 this.detectVariables();
             },
             detectVariables() {
-                const pattern = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
-                const found = new Set();
+                const varPattern = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+                const inclPattern = /\{\{>([a-zA-Z0-9_-]+)\}\}/g;
+                const foundVars = new Set();
+                const foundIncl = new Set();
                 let match;
-                while ((match = pattern.exec(this.content)) !== null) {
-                    found.add(match[1]);
+                while ((match = varPattern.exec(this.content)) !== null) {
+                    foundVars.add(match[1]);
                 }
-                this.variables = [...found];
+                while ((match = inclPattern.exec(this.content)) !== null) {
+                    foundIncl.add(match[1]);
+                }
+                this.variables = [...foundVars];
+                this.includes = [...foundIncl];
             },
             getMetaValue(varName, field) {
                 return this.prevMetadata[varName]?.[field] ?? '';
