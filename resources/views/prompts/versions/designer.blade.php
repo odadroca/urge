@@ -215,7 +215,7 @@
                                 <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Variables</p>
                                 <div class="flex flex-wrap gap-1">
                                     <template x-for="v in detectedVariables" :key="v">
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200" x-text="'{{' + v + '}}'"></span>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200" x-text="'{' + '{' + v + '}' + '}'"></span>
                                     </template>
                                 </div>
                             </div>
@@ -223,7 +223,7 @@
                                 <p class="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Includes</p>
                                 <div class="flex flex-wrap gap-1">
                                     <template x-for="s in detectedIncludes" :key="s">
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-50 text-emerald-600 border border-emerald-200" x-text="'{{>' + s + '}}'"></span>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-50 text-emerald-600 border border-emerald-200" x-text="'{' + '{>' + s + '}' + '}'"></span>
                                     </template>
                                 </div>
                             </div>
@@ -247,7 +247,7 @@
                             <template x-for="v in detectedVariables" :key="v">
                                 <div class="grid grid-cols-12 gap-2 items-start">
                                     <div class="col-span-2">
-                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-mono bg-indigo-50 text-indigo-700 border border-indigo-200" x-text="'{{' + v + '}}'"></span>
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-mono bg-indigo-50 text-indigo-700 border border-indigo-200" x-text="'{' + '{' + v + '}' + '}'"></span>
                                     </div>
                                     <div class="col-span-2">
                                         <select :name="'variable_metadata[' + v + '][type]'" class="w-full text-xs border-gray-300 rounded-md">
@@ -369,12 +369,12 @@
                             const name = el.dataset.name;
                             newBlock.type = 'variable';
                             newBlock.name = name;
-                            newBlock.token = '{{' + name + '}}';
+                            newBlock.token = '{' + '{' + name + '}' + '}';
                         } else if (type === 'include') {
                             const slug = el.dataset.slug;
                             newBlock.type = 'include';
                             newBlock.slug = slug;
-                            newBlock.token = '{{>' + slug + '}}';
+                            newBlock.token = '{' + '{>' + slug + '}' + '}';
                         }
 
                         this.blocks.splice(evt.newIndex, 0, newBlock);
@@ -420,7 +420,7 @@
                     id: this.nextId++,
                     type: 'variable',
                     name: name,
-                    token: '{{' + name + '}}',
+                    token: '{' + '{' + name + '}' + '}',
                 });
             },
 
@@ -436,7 +436,7 @@
                     id: this.nextId++,
                     type: 'include',
                     slug: slug,
-                    token: '{{>' + slug + '}}',
+                    token: '{' + '{>' + slug + '}' + '}',
                 });
             },
 
