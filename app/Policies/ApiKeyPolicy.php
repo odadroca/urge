@@ -21,4 +21,9 @@ class ApiKeyPolicy
     {
         return $user->isAdmin() || $apiKey->user_id === $user->id;
     }
+
+    public function rotate(User $user, ApiKey $apiKey): bool
+    {
+        return $user->isAdmin() || $apiKey->user_id === $user->id;
+    }
 }

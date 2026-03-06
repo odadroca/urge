@@ -26,6 +26,11 @@ class ApiKey extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function prompts()
+    {
+        return $this->belongsToMany(Prompt::class, 'api_key_prompt');
+    }
+
     public function isExpired(): bool
     {
         return $this->expires_at !== null && $this->expires_at->isPast();

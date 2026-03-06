@@ -67,9 +67,21 @@ Click **Edit** on the prompt detail page to change the name or description. This
 
 ---
 
-### Deleting a prompt
+### Archiving a prompt
 
-Only admins can delete prompts. The delete button appears at the bottom of the prompt detail page. Deleting a prompt permanently removes it and all its versions.
+Only admins can archive prompts. Click **Archive Prompt** in the danger zone on the prompt detail page. Archived prompts are hidden from the main list and invisible to the API (they return `404`).
+
+### Viewing archived prompts (Admin only)
+
+On the prompt list page, admins see a **Show archived** toggle. Enabling it reveals archived prompts in a dimmed style with a **Restore** button.
+
+### Restoring an archived prompt
+
+Click **Restore** on an archived prompt (visible in the list or on its detail page). The prompt and all its versions become active again.
+
+### Permanently deleting a prompt
+
+On an archived prompt's detail page, admins can click **Delete permanently** to remove the prompt and all its versions from the database forever. This cannot be undone.
 
 ---
 
@@ -80,11 +92,21 @@ Every change to prompt content is saved as a new, immutable version. Versions ar
 ### Creating a new version
 
 1. Open a prompt and click **New Version**.
-2. Write or paste the prompt content. Use `{{variable_name}}` for any values you want to fill in at call time.
+2. Write or paste the prompt content. Use `{{variable_name}}` for placeholders and `{{>slug}}` to include another prompt (see [Prompt Composition](#prompt-composition) below).
 3. Add an optional commit message describing what changed.
 4. Click **Save Version**.
 
-Variables are extracted automatically — you will see them listed as badges.
+Variables and includes are extracted automatically — you will see them listed as badges.
+
+### Variable metadata
+
+When creating a new version, you can add metadata to each detected variable:
+
+- **Type** — a hint for consumers (`string`, `number`, `boolean`, `json`, `date`, `enum`)
+- **Default** — a fallback value used when the variable is not provided during rendering
+- **Description** — a short explanation of what the variable expects
+
+Metadata is optional. If the previous version had metadata, it is pre-populated for convenience.
 
 The new version is **not active** by default. It must be promoted explicitly.
 
@@ -102,6 +124,59 @@ You can also set a version as active from the version detail page.
 
 Click **History** on any prompt to see all versions in reverse chronological order, including who created each one, when, and what the commit message was. Click **View** to read the full content of any past version.
 
+### Comparing versions
+
+On the version history page, check the boxes next to any two versions and click **View diff** to see a side-by-side comparison of their content.
+
+### Prompt Composition
+
+Prompts can include the content of other prompts using the `{{>slug}}` syntax. This avoids repeating shared content (like system rules or tone guidelines) across multiple prompts.
+
+**How it works:**
+
+- Write `{{>my-other-prompt}}` anywhere in your prompt content.
+- When the prompt is rendered (via the API), the include tag is replaced with the active version content of the referenced prompt.
+- Includes are recursive — an included prompt can itself include other prompts.
+- Variables are shared across all levels. For example, if a parent prompt passes `tone`, it is available in all included content.
+- The version create form shows detected includes as green badges with clickable links to the included prompts.
+
+**Example:**
+
+Create a prompt called "System Rules" with slug `system-rules`:
+```
+You are a helpful assistant. Always be polite and concise.
+```
+
+Then reference it in another prompt:
+```
+{{>system-rules}}
+
+Dear {{customer_name}}, here is the answer to your question about {{topic}}.
+```
+
+When rendered, the `{{>system-rules}}` tag is replaced with the full content of `system-rules`.
+
+**Environment propagation:** When rendering with an environment (e.g. `staging`), included prompts also use their staging version if one is assigned.
+
+**Circular references** are detected and will return an error. The maximum include depth is 10 by default (configurable via `URGE_MAX_INCLUDE_DEPTH`).
+
+### Environments
+
+Environments let you assign different versions to named stages (e.g. `production`, `staging`). This is useful when you want to test a new version in staging before promoting it to production.
+
+**Managing environments:**
+
+1. Open **History** for a prompt.
+2. Scroll down to the **Environments** section (visible to editors and admins).
+3. To change which version an environment points to, select a version from the dropdown and click **Assign**.
+4. To create a new environment, type a name in the text field, select a version, and click **Add**.
+
+The default environment suggestions (`production`, `staging`) appear in the dropdown. You can create any custom environment name.
+
+**Using environments via the API:**
+
+Pass `"environment": "staging"` in the render request body to render the version assigned to that environment instead of the active version. See the [API Reference](./api-reference.md) for details.
+
 ---
 
 ## API Keys
@@ -114,11 +189,22 @@ API keys allow external applications to query URGE programmatically. Each key is
 2. Click **New API Key**.
 3. Give it a descriptive name (e.g. "Production App", "Dev Laptop").
 4. Optionally set an expiry date.
-5. Click **Generate Key**.
+5. Optionally scope the key to specific prompts by checking them in the **Prompt Scope** section. An unscoped key can access all prompts.
+6. Click **Generate Key**.
 
 **The full key is shown exactly once** on the next screen. Copy it immediately — it cannot be retrieved again from the UI. If you lose it, revoke it and generate a new one.
 
 The key list shows a short preview (first 8 characters) and the last time the key was used, so you can identify and audit your keys.
+
+### Prompt-scoped API keys
+
+Scoped keys can only access the prompts they are assigned to. Attempting to access other prompts returns `403 KEY_SCOPE_DENIED`. The key list shows the scope as a badge — either "All prompts" or the number of scoped prompts.
+
+### Rotating an API key
+
+Click **Rotate** next to a key. This creates a new key with the same name, expiry, and prompt scope, and sets the old key to expire after a configurable overlap window (default: 24 hours). This gives you time to update applications without downtime.
+
+The overlap window is configurable via the `URGE_KEY_ROTATION_OVERLAP_HOURS` environment variable.
 
 ### Revoking an API key
 
@@ -378,6 +464,11 @@ You can compare two versions of the same prompt side-by-side to see what changed
 - **Use commit messages.** Even brief notes like "Added product name variable" or "Adjusted tone" make version history much easier to navigate later.
 - **Use separate API keys per application.** This lets you revoke access for one app without affecting others, and lets you see which app last used its key via the `Last Used` column.
 - **Pin versions in critical pipelines.** If a pipeline must not be affected by future prompt edits, pass `"version": N` in your render request to lock it to a specific version.
+- **Use environments for staged rollouts.** Assign a new version to `staging` first, test it, then assign it to `production` when ready.
+- **Scope API keys for security.** If an application only needs one prompt, scope its key to that prompt. This limits the blast radius if the key is compromised.
+- **Rotate keys instead of revoking.** The overlap window gives you time to update applications without downtime.
+- **Use includes for shared content.** Extract common instructions (system rules, tone guidelines, formatting rules) into their own prompts and include them with `{{>slug}}`. Changes to the included prompt automatically propagate to all prompts that reference it.
+- **Add variable metadata.** Descriptions and defaults help both human authors and API consumers understand what each variable expects.
 - **Viewer role for read-only consumers.** If you want a team member to be able to browse and copy prompts without being able to edit them, assign them the `viewer` role.
 - **Run prompts before publishing.** Use the prompt run feature to test changes against multiple LLM providers before setting a new version as active.
 - **Save good responses to the library.** When a run produces a great response, save it to the library immediately so you can reference or compare it later.

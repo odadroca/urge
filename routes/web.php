@@ -24,7 +24,20 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Prompts
-    Route::resource('prompts', PromptController::class);
+    Route::resource('prompts', PromptController::class)->except(['show']);
+    Route::get('prompts/{prompt}', [PromptController::class, 'show'])
+        ->withTrashed()
+        ->name('prompts.show');
+
+    // Prompt soft-delete actions (admin only, resolve trashed models)
+    Route::post('prompts/{prompt}/restore', [PromptController::class, 'restore'])
+        ->middleware('role:admin')
+        ->withTrashed()
+        ->name('prompts.restore');
+    Route::delete('prompts/{prompt}/force-delete', [PromptController::class, 'forceDelete'])
+        ->middleware('role:admin')
+        ->withTrashed()
+        ->name('prompts.force-delete');
 
     // Prompt versions
     Route::get('prompts/{prompt}/versions', [PromptVersionController::class, 'index'])
@@ -39,12 +52,19 @@ Route::middleware(['auth'])->group(function () {
         ->name('prompts.versions.show');
     Route::post('prompts/{prompt}/versions/{version}/activate', [PromptVersionController::class, 'activate'])
         ->name('prompts.versions.activate');
+    Route::get('prompts/{prompt}/versions/{version}/compose', [PromptVersionController::class, 'compose'])
+        ->name('prompts.versions.compose');
 
     // API keys
     Route::get('api-keys', [ApiKeyController::class, 'index'])->name('api-keys.index');
     Route::get('api-keys/create', [ApiKeyController::class, 'create'])->name('api-keys.create');
     Route::post('api-keys', [ApiKeyController::class, 'store'])->name('api-keys.store');
+    Route::post('api-keys/{apiKey}/rotate', [ApiKeyController::class, 'rotate'])->name('api-keys.rotate');
     Route::delete('api-keys/{apiKey}', [ApiKeyController::class, 'destroy'])->name('api-keys.destroy');
+
+    // Prompt environment assignments
+    Route::post('prompts/{prompt}/environments', [PromptVersionController::class, 'assignEnvironment'])
+        ->name('prompts.environments.assign');
 
     // Prompt runs
     Route::get('prompts/{prompt}/runs', [PromptRunController::class, 'index'])->name('prompt-runs.index');
@@ -71,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('stories', StoryController::class);
     Route::post('stories/{story}/steps', [StoryStepController::class, 'store'])->name('story-steps.store');
     Route::delete('stories/{story}/steps/{step}', [StoryStepController::class, 'destroy'])->name('story-steps.destroy');
+    Route::patch('stories/{story}/steps/{step}', [StoryStepController::class, 'update'])->name('story-steps.update');
     Route::post('stories/{story}/steps/{step}/move-up', [StoryStepController::class, 'moveUp'])->name('story-steps.move-up');
     Route::post('stories/{story}/steps/{step}/move-down', [StoryStepController::class, 'moveDown'])->name('story-steps.move-down');
 

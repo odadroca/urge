@@ -17,12 +17,16 @@ class PromptVersion extends Model
         'content',
         'commit_message',
         'variables',
+        'variable_metadata',
+        'includes',
         'created_by',
         'created_at',
     ];
 
     protected $casts = [
         'variables' => 'array',
+        'variable_metadata' => 'array',
+        'includes' => 'array',
         'created_at' => 'datetime',
     ];
 

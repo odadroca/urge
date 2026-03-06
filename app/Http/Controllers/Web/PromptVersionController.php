@@ -5,25 +5,41 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\LibraryEntry;
 use App\Models\Prompt;
+use App\Models\PromptEnvironment;
 use App\Models\PromptVersion;
+use App\Services\TemplateEngine;
 use App\Services\VersioningService;
 use Illuminate\Http\Request;
 
 class PromptVersionController extends Controller
 {
-    public function __construct(private VersioningService $versioning) {}
+    public function __construct(private VersioningService $versioning, private TemplateEngine $engine) {}
 
     public function index(Prompt $prompt)
     {
         $versions = $prompt->versions()->with('creator')->get();
-        return view('prompts.versions.index', compact('prompt', 'versions'));
+        $environments = PromptEnvironment::where('prompt_id', $prompt->id)->get();
+        return view('prompts.versions.index', compact('prompt', 'versions', 'environments'));
     }
 
     public function create(Prompt $prompt)
     {
         $this->authorize('createVersion', $prompt);
         $latest = $prompt->versions()->first();
-        return view('prompts.versions.create', compact('prompt', 'latest'));
+
+        $allPrompts = Prompt::whereNull('deleted_at')
+            ->where('id', '!=', $prompt->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+
+        $knownVariables = PromptVersion::whereNotNull('variables')
+            ->pluck('variables')
+            ->flatten()
+            ->unique()
+            ->sort()
+            ->values();
+
+        return view('prompts.versions.create', compact('prompt', 'latest', 'allPrompts', 'knownVariables'));
     }
 
     public function store(Request $request, Prompt $prompt)
@@ -31,8 +47,14 @@ class PromptVersionController extends Controller
         $this->authorize('createVersion', $prompt);
 
         $data = $request->validate([
-            'content'        => ['required', 'string'],
-            'commit_message' => ['nullable', 'string', 'max:500'],
+            'content'                     => ['required', 'string'],
+            'commit_message'              => ['nullable', 'string', 'max:500'],
+            'variable_metadata'           => ['nullable', 'array'],
+            'variable_metadata.*.type'    => ['nullable', 'string', 'in:string,text,enum,number,boolean'],
+            'variable_metadata.*.default' => ['nullable', 'string'],
+            'variable_metadata.*.description' => ['nullable', 'string'],
+            'variable_metadata.*.options' => ['nullable', 'array'],
+            'variable_metadata.*.options.*' => ['string'],
         ]);
 
         $version = $this->versioning->createVersion($prompt, $data, auth()->user());
@@ -134,6 +156,42 @@ class PromptVersionController extends Controller
         }
 
         return $groups;
+    }
+
+    public function assignEnvironment(Request $request, Prompt $prompt)
+    {
+        $this->authorize('activateVersion', $prompt);
+
+        $data = $request->validate([
+            'environment_name' => ['required', 'string', 'max:50'],
+            'version_id'       => ['required', 'exists:prompt_versions,id'],
+        ]);
+
+        PromptEnvironment::updateOrCreate(
+            ['prompt_id' => $prompt->id, 'name' => $data['environment_name']],
+            ['prompt_version_id' => $data['version_id']]
+        );
+
+        return redirect()
+            ->route('prompts.versions.index', $prompt)
+            ->with('success', "Environment '{$data['environment_name']}' updated.");
+    }
+
+    public function compose(Prompt $prompt, int $versionNumber)
+    {
+        $version = $prompt->versions()
+            ->where('version_number', $versionNumber)
+            ->firstOrFail();
+
+        try {
+            $result = $this->engine->render($version->content, [], $version->variable_metadata);
+            return response()->json([
+                'composed'  => $result['rendered'],
+                'includes'  => $result['includes_resolved'],
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
     }
 
     public function activate(Prompt $prompt, int $versionNumber)

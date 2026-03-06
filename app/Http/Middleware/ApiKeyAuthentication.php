@@ -44,6 +44,30 @@ class ApiKeyAuthentication
             ->where('id', $apiKey->id)
             ->update(['last_used_at' => now()]);
 
+        $request->attributes->set('api_key_id', $apiKey->id);
+        $request->attributes->set('api_key', $apiKey);
+
+        // Check prompt scope
+        $scopedPromptIds = $apiKey->prompts()->pluck('prompts.id')->all();
+        if (!empty($scopedPromptIds)) {
+            $request->attributes->set('api_key_scoped_prompt_ids', $scopedPromptIds);
+
+            // Extract slug from the route path
+            $path = $request->path();
+            if (preg_match('#api/v1/prompts/([^/]+)#', $path, $matches)) {
+                $slug = $matches[1];
+                $prompt = \App\Models\Prompt::where('slug', $slug)->first();
+                if ($prompt && !in_array($prompt->id, $scopedPromptIds)) {
+                    return response()->json([
+                        'error' => [
+                            'code' => 'KEY_SCOPE_DENIED',
+                            'message' => "This API key does not have access to prompt '{$slug}'.",
+                        ],
+                    ], 403);
+                }
+            }
+        }
+
         Auth::setUser($user);
 
         return $next($request);

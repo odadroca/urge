@@ -31,6 +31,22 @@
                 <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
             @endif
 
+            @if($prompt->trashed())
+            <div class="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded flex items-center justify-between">
+                <span>This prompt was archived on {{ $prompt->deleted_at->format('Y-m-d') }}.</span>
+                <div class="flex gap-2">
+                    <form method="POST" action="{{ route('prompts.restore', $prompt) }}">
+                        @csrf
+                        <button type="submit" class="px-3 py-1 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700">Restore</button>
+                    </form>
+                    <form method="POST" action="{{ route('prompts.force-delete', $prompt) }}" onsubmit="return confirm('Permanently delete this prompt? This cannot be undone.')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700">Delete permanently</button>
+                    </form>
+                </div>
+            </div>
+            @endif
+
             {{-- Metadata --}}
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
                 @if($prompt->description)
@@ -90,6 +106,18 @@
                 </div>
                 @endif
 
+                @if($prompt->activeVersion->includes && count($prompt->activeVersion->includes))
+                <div class="mb-4">
+                    <p class="text-xs text-gray-500 mb-1">Includes</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach($prompt->activeVersion->includes as $inclSlug)
+                        <a href="{{ route('prompts.show', $inclSlug) }}"
+                           class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">&#123;&#123;&gt;{{ $inclSlug }}&#125;&#125;</a>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 <div x-data="{ copied: false }" class="relative">
                     <pre x-ref="content" class="bg-gray-50 border border-gray-200 rounded p-4 pr-24 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-96">{{ $prompt->activeVersion->content }}</pre>
                     <button
@@ -103,6 +131,65 @@
                         <span x-text="copied ? 'Copied!' : 'Copy'"></span>
                     </button>
                 </div>
+
+                @if($prompt->activeVersion->includes && count($prompt->activeVersion->includes))
+                <div class="mt-4"
+                     x-data="{
+                         open: true, loading: false, composed: null, includes: [], error: null, copied: false,
+                         async load() {
+                             this.loading = true;
+                             try {
+                                 const r = await fetch('{{ route('prompts.versions.compose', [$prompt, $prompt->activeVersion->version_number]) }}');
+                                 const d = await r.json();
+                                 if (d.error) { this.error = d.error; } else { this.composed = d.composed; this.includes = d.includes; }
+                             } catch { this.error = 'Failed to load composed content.'; }
+                             this.loading = false;
+                         }
+                     }"
+                     x-init="load()">
+                    <div class="flex items-center gap-3 mb-2">
+                        <button @click="open = !open"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-md transition"
+                                :class="open ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/>
+                            </svg>
+                            <span x-text="loading ? 'Resolving…' : (open ? 'Hide composed' : 'Preview composed')">Preview composed</span>
+                        </button>
+                    </div>
+
+                    <div x-show="open">
+                        <template x-if="loading">
+                            <div class="bg-emerald-50 border border-emerald-200 rounded p-4 text-sm text-emerald-600 italic animate-pulse">Resolving includes…</div>
+                        </template>
+                        <template x-if="error">
+                            <p class="text-sm text-red-500 italic" x-text="error"></p>
+                        </template>
+                        <template x-if="composed !== null && !error">
+                            <div x-data="{ copied: false }">
+                                <div class="flex flex-wrap gap-1.5 mb-2">
+                                    <template x-for="slug in includes" :key="slug">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-emerald-50 text-emerald-600 border border-emerald-200" x-text="slug + ' inlined'"></span>
+                                    </template>
+                                </div>
+                                <div class="relative">
+                                    <pre x-ref="composedContent" class="bg-emerald-50 border border-emerald-200 rounded p-4 pr-24 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-auto max-h-96" x-text="composed"></pre>
+                                    <button
+                                        @click="navigator.clipboard.writeText($refs.composedContent.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)"
+                                        class="absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded border transition"
+                                        :class="copied ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400'">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" stroke-linecap="round"/>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/>
+                                        </svg>
+                                        <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                @endif
             </div>
             @else
             <div class="bg-white shadow-sm sm:rounded-lg p-6 text-center text-gray-500">
@@ -126,15 +213,17 @@ Content-Type: application/json
 {"variables": { {{ $prompt->activeVersion?->variables ? '"' . implode('": "...", "', $prompt->activeVersion->variables ?? []) . '": "..."' : '' }} }}</pre>
             </div>
 
+            @if(!$prompt->trashed())
             @can('delete', $prompt)
             <div class="bg-white shadow-sm sm:rounded-lg p-6 border-t-4 border-red-300">
                 <h3 class="font-semibold text-red-700 mb-2">Danger Zone</h3>
-                <form method="POST" action="{{ route('prompts.destroy', $prompt) }}" onsubmit="return confirm('Delete this prompt and all its versions?')">
+                <form method="POST" action="{{ route('prompts.destroy', $prompt) }}" onsubmit="return confirm('Archive this prompt? It can be restored by an admin.')">
                     @csrf @method('DELETE')
-                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">Delete Prompt</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">Archive Prompt</button>
                 </form>
             </div>
             @endcan
+            @endif
         </div>
     </div>
 </x-app-layout>
