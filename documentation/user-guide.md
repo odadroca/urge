@@ -20,9 +20,9 @@ If you are not using the public registration flow, an admin can create users dir
 
 | Role | What they can do |
 |---|---|
-| **admin** | Everything: create/edit/delete prompts, manage users and roles, manage all API keys |
-| **editor** | Create and edit prompts, create versions, set active versions, manage their own API keys |
-| **viewer** | Read-only access to all prompts and versions, manage their own API keys |
+| **admin** | Everything: create/edit/delete prompts, manage users and roles, manage all API keys, configure LLM providers |
+| **editor** | Create and edit prompts, create versions, set active versions, run prompts, manage library and stories, manage their own API keys |
+| **viewer** | Read-only access to all prompts and versions, run prompts, manage library and stories, manage their own API keys |
 
 Your current role is visible in the top navigation area.
 
@@ -168,6 +168,210 @@ Click your name in the top-right corner and select **Profile** to:
 
 ---
 
+## Dashboard
+
+After logging in you land on the dashboard, which provides a quick overview of everything in URGE.
+
+### Stat cards
+
+Five summary cards are shown across the top:
+
+- **Prompts** — total number of prompts
+- **Active versions** — how many prompts have an active version (and what percentage)
+- **Library entries** — total saved responses in the library
+- **Stories** — total stories
+- **Total runs** — total prompt executions across all prompts
+
+### Recent activity
+
+Below the stat cards you will find:
+
+- **Recent Prompts** — the five most recently updated prompts with version badge and tags
+- **Needs Attention** — prompts that have no active version yet, with a quick link to set one
+- **Quick Actions** — shortcuts to create a new prompt, library entry, story, or API key
+- **Recent Runs** — latest prompt executions with response count and creator
+- **Recent Library** — latest library entries with provider, model, and rating
+- **Top Tags** — the 12 most-used tags as clickable pills that filter the prompt list
+
+---
+
+## Tags
+
+Prompts can be tagged to help with organisation and discovery.
+
+### Adding tags
+
+When creating or editing a prompt, enter tags as a comma-separated list (e.g. `onboarding, support, v2`). Tags are stored as a JSON array on the prompt.
+
+### Using tags
+
+- Tags appear as badges on prompts throughout the app.
+- Click any tag badge (on a prompt detail page, the prompt list, or the dashboard) to filter the prompt list to only prompts with that tag.
+- The dashboard shows the 12 most-used tags with counts.
+
+---
+
+## Running Prompts
+
+URGE can send a prompt directly to one or more LLM providers and display the responses side-by-side. This is useful for testing prompt changes before publishing them via the API.
+
+### Prerequisites
+
+- The prompt must have an **active version** (or at least one version).
+- At least one LLM provider must be **enabled** by an admin (see [LLM Providers](#llm-providers-admin-only) below).
+
+### How to run a prompt
+
+1. Open a prompt and click the green **Run** button.
+2. If the prompt contains `{{variables}}`, fill in values for each one. Fields can be left blank to keep the placeholder in the rendered output.
+3. A **Prompt Preview** section lets you expand and review the raw template before running.
+4. Select which LLM providers to use (all enabled providers are checked by default).
+5. Click **Run Prompt**.
+
+### Viewing results
+
+After the run completes you are taken to the results page:
+
+- Each provider's response is shown as a card with the **provider name**, **model**, **status** (success or error), **duration**, and **token counts** (input/output).
+- Response text is displayed in a scrollable monospace box.
+- If a provider returned an error, the error message is shown in a red banner.
+
+### Rating responses
+
+Click the stars (1–5) on any response card to rate it. The rating is saved immediately via AJAX — no page reload needed.
+
+### Exporting and saving
+
+- **Export** — click the export button on a response card to download it as a `.md` file containing the prompt, variables, response text, and rating.
+- **Save to Library** — click to save a successful response directly to the Response Library for future reference and comparison.
+
+### Run history
+
+Click **Runs** on a prompt's detail page to see a paginated table of all past executions. Each row shows the run ID, version used, models queried, number of ratings, creator, and date. Click **View** to revisit the results.
+
+---
+
+## LLM Providers (Admin only)
+
+Admins can configure which LLM providers are available for prompt runs.
+
+### Accessing provider settings
+
+Navigate to **Admin → LLM Providers** (visible only to admin users).
+
+### Pre-configured providers
+
+URGE ships with these providers pre-seeded (all disabled by default):
+
+| Provider | Default model |
+|---|---|
+| OpenAI GPT-4o Mini | `gpt-4o-mini` |
+| Anthropic Claude Haiku | `claude-haiku-4-5-20251001` |
+| Mistral Small | `mistral-small-latest` |
+| Google Gemini Flash | `gemini-1.5-flash` |
+| Ollama (local) | `llama3.2` |
+| OpenRouter | `openai/gpt-4o-mini` |
+
+### Configuring a provider
+
+Click **Configure** next to any provider to open its settings:
+
+- **Display Name** — the label shown in the run UI.
+- **Model** — the model identifier sent to the provider's API (e.g. `gpt-4o`, `claude-sonnet-4-20250514`).
+- **API Key** — enter the provider's API key. Keys are encrypted with AES-256-CBC before storage. Leave blank when editing to keep the existing key.
+- **Base URL** — only shown for Ollama; defaults to `http://localhost:11434`.
+- **Enabled** — toggle whether this provider appears in the run UI.
+
+Ollama does not require an API key since it runs locally.
+
+---
+
+## Response Library
+
+The library is a curated collection of saved LLM responses. Use it to bookmark interesting outputs, compare responses across providers, and build stories.
+
+### Adding entries
+
+There are two ways to add a library entry:
+
+1. **From a run** — after running a prompt, click **Save to Library** on any successful response card. The entry is pre-filled with the prompt, version, provider, model, response text, and rating.
+2. **Manually** — go to **Library → New Entry**, select a prompt and version, then enter the model name and response text yourself.
+
+You can add optional **notes** (up to 2000 characters) to any entry.
+
+### Browsing and filtering
+
+The library index shows a paginated table of all entries. Use the filter bar to narrow results by:
+
+- **Prompt** — show entries for a specific prompt only
+- **Provider** — show entries from a specific LLM provider
+- **Rated only** — show only entries that have a star rating
+
+### Comparing responses
+
+To compare multiple responses for the same prompt version:
+
+1. Navigate to a library entry and click **Compare** (or use the compare link on the version detail page).
+2. All library entries for that prompt version are displayed side-by-side (or stacked, using the toggle button).
+3. Each card shows the provider, model, rating, word count, response text, and notes.
+
+This is especially useful for evaluating how different models handle the same prompt.
+
+### Editing and exporting
+
+- Click **Edit** on any entry to update notes, rating, or response text.
+- Click **Export** to download the entry as a markdown file.
+- Click **Delete** to permanently remove an entry.
+
+---
+
+## Stories
+
+Stories let you chain prompts and their responses into ordered, multi-step sequences. They are useful for documenting prompt workflows, building narrative threads, or planning multi-turn interactions.
+
+### Creating a story
+
+1. Click **Stories** in the navigation bar.
+2. Click **New Story**.
+3. Enter a title and optional description.
+4. Click **Create & Add Steps** — you are taken to the edit page.
+
+### Adding steps
+
+Each step in a story links to a specific prompt version and optionally a library response:
+
+1. On the story edit page, scroll to **Add Step**.
+2. Select a **Prompt** from the dropdown.
+3. Select a **Version** (versions for the chosen prompt are loaded automatically).
+4. Optionally select a **Library Response** (library entries for that version are shown if any exist).
+5. Add optional **Notes** for this step.
+6. Click **Add Step**.
+
+### Reordering steps
+
+Use the **up/down arrow** buttons next to each step to change its position in the sequence. The first step cannot move up and the last step cannot move down.
+
+### Viewing a story
+
+The story detail page displays all steps in an expandable accordion. Each step header shows the step number, prompt name, version, and linked library response (if any). Click a step to expand it and see the full prompt content and response text.
+
+### Deleting
+
+- To remove a single step, click the **delete** button next to it on the edit page.
+- To delete an entire story (and all its steps), use the **Delete Story** button in the danger zone at the bottom of the edit page.
+
+---
+
+## Version Compare
+
+You can compare two versions of the same prompt side-by-side to see what changed.
+
+1. Open **History** on any prompt.
+2. Select two versions to compare (via the **Compare** link or by choosing version numbers).
+3. The compare view shows the two versions side-by-side with differences highlighted.
+
+---
+
 ## Tips
 
 - **Use slugs as stable identifiers.** Because slugs never change, you can hard-code them in your application config and rename prompts freely in the UI without breaking anything.
@@ -175,3 +379,7 @@ Click your name in the top-right corner and select **Profile** to:
 - **Use separate API keys per application.** This lets you revoke access for one app without affecting others, and lets you see which app last used its key via the `Last Used` column.
 - **Pin versions in critical pipelines.** If a pipeline must not be affected by future prompt edits, pass `"version": N` in your render request to lock it to a specific version.
 - **Viewer role for read-only consumers.** If you want a team member to be able to browse and copy prompts without being able to edit them, assign them the `viewer` role.
+- **Run prompts before publishing.** Use the prompt run feature to test changes against multiple LLM providers before setting a new version as active.
+- **Save good responses to the library.** When a run produces a great response, save it to the library immediately so you can reference or compare it later.
+- **Use the compare view.** When evaluating model quality, save responses from different providers to the library and use the compare view to see them side-by-side.
+- **Tag your prompts.** Even a few tags like `support`, `onboarding`, or `internal` make it much easier to find prompts as the collection grows.

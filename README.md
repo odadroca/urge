@@ -13,6 +13,11 @@ A self-hosted prompt management system. Create, version-control, and publish LLM
 - **REST API** — read-only API with Bearer token authentication for use in LLM pipelines
 - **Multi-user with roles** — admin, editor, and viewer roles; first registered user becomes admin
 - **API key management** — per-user keys with optional expiry; keys are stored encrypted
+- **Prompt testing** — execute prompts against multiple LLM providers (OpenAI, Anthropic, Mistral, Gemini, Ollama, OpenRouter) and compare responses side-by-side
+- **Response library** — save, rate (1–5 stars), compare, and export LLM responses
+- **Stories** — chain prompts and responses into ordered, multi-step sequences
+- **Tags** — organize prompts with tags; filter and browse by tag
+- **Dashboard** — overview of prompts, runs, library entries, stories, and top tags at a glance
 
 ---
 
@@ -118,9 +123,9 @@ See [`documentation/api-reference.md`](documentation/api-reference.md) for the f
 
 | Role | Capabilities |
 |---|---|
-| **admin** | Full access — prompts, versions, users, all API keys |
-| **editor** | Create and edit prompts, manage own API keys |
-| **viewer** | Read-only access to prompts, manage own API keys |
+| **admin** | Full access — prompts, versions, users, all API keys, LLM provider configuration |
+| **editor** | Create and edit prompts, run prompts, manage library and stories, manage own API keys |
+| **viewer** | Read-only access to prompts, run prompts, manage library and stories, manage own API keys |
 
 ---
 
