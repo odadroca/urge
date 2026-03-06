@@ -3,11 +3,10 @@
 namespace App\Services\LlmProviders;
 
 use App\Services\LlmProviders\Contracts\LlmDriverInterface;
-use Illuminate\Support\Facades\Http;
 
 class OpenRouterDriver implements LlmDriverInterface
 {
-    private const BASE_URL = 'https://openrouter.ai/api';
+    private const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 
     public function __construct(
         private readonly string $apiKey,
@@ -19,25 +18,45 @@ class OpenRouterDriver implements LlmDriverInterface
         $start = hrtime(true);
 
         try {
-            $response = Http::withToken($this->apiKey)
-                ->withHeaders([
-                    'HTTP-Referer' => config('app.url', 'http://localhost'),
-                    'X-Title'      => config('app.name', 'URGE'),
-                ])
-                ->timeout(120)
-                ->post(self::BASE_URL . '/v1/chat/completions', [
-                    'model'    => $this->model,
-                    'messages' => [['role' => 'user', 'content' => $prompt]],
-                ]);
+            $payload = json_encode([
+                'model'    => $this->model,
+                'messages' => [['role' => 'user', 'content' => $prompt]],
+            ]);
+
+            $ch = curl_init(self::ENDPOINT);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST           => true,
+                CURLOPT_SSL_VERIFYPEER => config('urge.curl_ssl_verify', true),
+                CURLOPT_SSL_VERIFYHOST => config('urge.curl_ssl_verify', true) ? 2 : 0,
+                CURLOPT_TIMEOUT        => 120,
+                CURLOPT_HTTPHEADER     => [
+                    'Authorization: Bearer ' . $this->apiKey,
+                    'Content-Type: application/json',
+                    'HTTP-Referer: ' . config('app.url', 'http://localhost'),
+                    'X-Title: ' . config('app.name', 'URGE'),
+                ],
+                CURLOPT_POSTFIELDS => $payload,
+            ]);
+
+            $rawResponse = curl_exec($ch);
+            $curlError   = curl_error($ch);
+            $httpCode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
             $durationMs = (int) ((hrtime(true) - $start) / 1_000_000);
 
-            if ($response->failed()) {
-                $error = $response->json('error.message') ?? $response->body();
+            if ($rawResponse === false) {
+                return LlmResult::failure($curlError ?: 'cURL request failed', $this->model, $durationMs);
+            }
+
+            $data = json_decode($rawResponse, true);
+
+            if ($httpCode >= 400) {
+                $error = $data['error']['message'] ?? $rawResponse;
                 return LlmResult::failure($error, $this->model, $durationMs);
             }
 
-            $data = $response->json();
             return LlmResult::success(
                 text: $data['choices'][0]['message']['content'] ?? '',
                 modelUsed: $data['model'] ?? $this->model,

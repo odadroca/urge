@@ -18,7 +18,8 @@ class OllamaDriver implements LlmDriverInterface
         $start = hrtime(true);
 
         try {
-            $response = Http::timeout(300)
+            $response = Http::withOptions(['verify' => config('urge.curl_ssl_verify', true)])
+                ->timeout(300)
                 ->post("{$base}/api/chat", [
                     'model'    => $this->model,
                     'messages' => [['role' => 'user', 'content' => $prompt]],

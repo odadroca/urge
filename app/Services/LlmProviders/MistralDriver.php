@@ -20,6 +20,7 @@ class MistralDriver implements LlmDriverInterface
 
         try {
             $response = Http::withToken($this->apiKey)
+                ->withOptions(['verify' => config('urge.curl_ssl_verify', true)])
                 ->timeout(120)
                 ->post(self::BASE_URL . '/v1/chat/completions', [
                     'model'    => $this->model,

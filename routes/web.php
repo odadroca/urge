@@ -48,6 +48,15 @@ Route::middleware(['auth'])->group(function () {
         ->name('prompts.versions.store');
     Route::get('prompts/{prompt}/versions/compare', [PromptVersionController::class, 'compare'])
         ->name('prompts.versions.compare');
+
+    // Visual prompt designer (must be before {version} wildcard)
+    Route::get('prompts/{prompt}/versions/designer', [\App\Http\Controllers\Web\DesignerController::class, 'create'])
+        ->name('prompts.versions.designer');
+    Route::post('prompts/{prompt}/versions/designer', [\App\Http\Controllers\Web\DesignerController::class, 'store'])
+        ->name('prompts.versions.designer.store');
+    Route::get('prompts/{prompt}/versions/{version}/designer', [\App\Http\Controllers\Web\DesignerController::class, 'edit'])
+        ->name('prompts.versions.designer.edit');
+
     Route::get('prompts/{prompt}/versions/{version}', [PromptVersionController::class, 'show'])
         ->name('prompts.versions.show');
     Route::post('prompts/{prompt}/versions/{version}/activate', [PromptVersionController::class, 'activate'])
@@ -103,6 +112,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('llm-providers', [LlmProviderController::class, 'index'])->name('llm-providers.index');
             Route::get('llm-providers/{provider}/edit', [LlmProviderController::class, 'edit'])->name('llm-providers.edit');
             Route::put('llm-providers/{provider}', [LlmProviderController::class, 'update'])->name('llm-providers.update');
+            Route::post('llm-providers/{provider}/test', [LlmProviderController::class, 'test'])->name('llm-providers.test');
         });
     });
 });

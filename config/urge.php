@@ -11,4 +11,5 @@ return [
     'api_rate_window'             => env('URGE_API_RATE_WINDOW', 60),
     'key_rotation_overlap_hours'  => env('URGE_KEY_ROTATION_OVERLAP_HOURS', 24),
     'default_environments'        => ['production', 'staging'],
+    'curl_ssl_verify'             => env('CURL_SSL_VERIFY', true),
 ];

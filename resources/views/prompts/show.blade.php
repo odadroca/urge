@@ -12,9 +12,21 @@
                 </a>
                 @endif
                 @can('createVersion', $prompt)
-                <a href="{{ route('prompts.versions.create', $prompt) }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">
-                    New Version
-                </a>
+                <div class="relative" x-data="{ open: false }">
+                    <div class="inline-flex rounded-md shadow-sm">
+                        <a href="{{ route('prompts.versions.create', $prompt) }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-l-md hover:bg-indigo-700">
+                            New Version
+                        </a>
+                        <button type="button" @click="open = !open" @click.away="open = false"
+                                class="inline-flex items-center px-2 py-2 bg-indigo-700 text-white text-sm rounded-r-md hover:bg-indigo-800 border-l border-indigo-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                    </div>
+                    <div x-show="open" x-cloak class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                        <a href="{{ route('prompts.versions.create', $prompt) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Text Editor</a>
+                        <a href="{{ route('prompts.versions.designer', $prompt) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Visual Designer</a>
+                    </div>
+                </div>
                 @endcan
                 @can('update', $prompt)
                 <a href="{{ route('prompts.edit', $prompt) }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50">
@@ -195,7 +207,11 @@
             <div class="bg-white shadow-sm sm:rounded-lg p-6 text-center text-gray-500">
                 <p>No active version set.</p>
                 @can('createVersion', $prompt)
-                <a href="{{ route('prompts.versions.create', $prompt) }}" class="mt-2 inline-flex items-center text-sm text-indigo-600 hover:underline">Create the first version</a>
+                <div class="mt-2 flex items-center justify-center gap-3">
+                    <a href="{{ route('prompts.versions.create', $prompt) }}" class="inline-flex items-center text-sm text-indigo-600 hover:underline">Create the first version</a>
+                    <span class="text-gray-300">or</span>
+                    <a href="{{ route('prompts.versions.designer', $prompt) }}" class="inline-flex items-center text-sm text-indigo-600 hover:underline">Use the Visual Designer</a>
+                </div>
                 @endcan
             </div>
             @endif

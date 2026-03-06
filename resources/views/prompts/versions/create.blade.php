@@ -1,10 +1,15 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">New Version</h2>
-            <p class="text-sm text-gray-500 mt-0.5">
-                <a href="{{ route('prompts.show', $prompt) }}" class="text-indigo-600 hover:underline">{{ $prompt->name }}</a>
-            </p>
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">New Version</h2>
+                <p class="text-sm text-gray-500 mt-0.5">
+                    <a href="{{ route('prompts.show', $prompt) }}" class="text-indigo-600 hover:underline">{{ $prompt->name }}</a>
+                </p>
+            </div>
+            <a href="{{ route('prompts.versions.designer', $prompt) }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50">
+                Switch to Visual Designer
+            </a>
         </div>
     </x-slot>
 

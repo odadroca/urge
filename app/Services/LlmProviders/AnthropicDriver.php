@@ -24,6 +24,7 @@ class AnthropicDriver implements LlmDriverInterface
                 'x-api-key'         => $this->apiKey,
                 'anthropic-version' => self::API_VERSION,
             ])
+                ->withOptions(['verify' => config('urge.curl_ssl_verify', true)])
                 ->timeout(120)
                 ->post(self::BASE_URL . '/v1/messages', [
                     'model'      => $this->model,

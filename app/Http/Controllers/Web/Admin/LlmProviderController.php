@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LlmProvider;
+use App\Services\LlmDispatchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 
@@ -46,5 +47,30 @@ class LlmProviderController extends Controller
 
         return redirect()->route('admin.llm-providers.index')
             ->with('success', "Provider \"{$provider->name}\" updated.");
+    }
+
+    public function test(LlmProvider $provider, LlmDispatchService $dispatch)
+    {
+        try {
+            $result = $dispatch->dispatch($provider, 'Reply with only the word OK.');
+            if ($result->success) {
+                return response()->json([
+                    'success'     => true,
+                    'message'     => trim($result->text),
+                    'duration_ms' => $result->durationMs,
+                ]);
+            }
+            return response()->json([
+                'success'     => false,
+                'message'     => $result->error ?? 'Unknown error',
+                'duration_ms' => $result->durationMs,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success'     => false,
+                'message'     => $e->getMessage(),
+                'duration_ms' => 0,
+            ]);
+        }
     }
 }

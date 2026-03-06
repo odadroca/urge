@@ -21,7 +21,8 @@ class GeminiDriver implements LlmDriverInterface
         try {
             $url = self::BASE_URL . "/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
 
-            $response = Http::timeout(120)
+            $response = Http::withOptions(['verify' => config('urge.curl_ssl_verify', true)])
+                ->timeout(120)
                 ->post($url, [
                     'contents' => [
                         ['parts' => [['text' => $prompt]]],

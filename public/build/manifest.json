@@ -1,17 +1,17 @@
 {
-  "resources/css/app.css": {
-    "file": "assets/app-r_p56t3I.css",
-    "src": "resources/css/app.css",
+  "C:/#DATA/Onedrive/Apps/URGE/resources/css/app.css": {
+    "file": "assets/app-Bh3ImS6n.css",
+    "src": "C:/#DATA/Onedrive/Apps/URGE/resources/css/app.css",
     "isEntry": true,
     "name": "app",
     "names": [
       "app.css"
     ]
   },
-  "resources/js/app.js": {
-    "file": "assets/app-CYSoDwka.js",
+  "C:/#DATA/Onedrive/Apps/URGE/resources/js/app.js": {
+    "file": "assets/app-CfBZtL-J.js",
     "name": "app",
-    "src": "resources/js/app.js",
+    "src": "C:/#DATA/Onedrive/Apps/URGE/resources/js/app.js",
     "isEntry": true
   }
 }

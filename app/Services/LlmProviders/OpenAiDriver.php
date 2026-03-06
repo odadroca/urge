@@ -22,6 +22,7 @@ class OpenAiDriver implements LlmDriverInterface
 
         try {
             $response = Http::withToken($this->apiKey)
+                ->withOptions(['verify' => config('urge.curl_ssl_verify', true)])
                 ->timeout(120)
                 ->post("{$base}/v1/chat/completions", [
                     'model'    => $this->model,

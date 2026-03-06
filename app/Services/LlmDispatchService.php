@@ -45,6 +45,12 @@ class LlmDispatchService
             throw new \RuntimeException("No API key configured for provider: {$provider->name}");
         }
 
-        return Crypt::decryptString($provider->api_key_encrypted);
+        $key = Crypt::decryptString($provider->api_key_encrypted);
+
+        if (trim($key) === '') {
+            throw new \RuntimeException("API key for provider \"{$provider->name}\" is empty. Please reconfigure it.");
+        }
+
+        return $key;
     }
 }
