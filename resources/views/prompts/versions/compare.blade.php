@@ -100,28 +100,22 @@
                                 @endforeach
 
                             @else
-                                {{-- Equal group: all lines when onlyDiff=false --}}
                                 @php $equalCount = count($group['items']); @endphp
-                                <template x-if="!onlyDiff">
-                                    <tbody>
-                                    @foreach($group['items'] as $item)
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="w-10 text-right pr-3 pl-2 py-0.5 text-gray-300 select-none border-r border-gray-100">{{ $item['lineA'] }}</td>
-                                        <td class="w-10 text-right pr-3 py-0.5 text-gray-300 select-none border-r border-gray-100">{{ $item['lineB'] }}</td>
-                                        <td class="w-6 py-0.5 border-r border-gray-100 select-none"></td>
-                                        <td class="pl-4 pr-6 py-0.5 text-gray-500 whitespace-pre-wrap break-all">{{ $item['line'] }}</td>
-                                    </tr>
-                                    @endforeach
-                                    </tbody>
-                                </template>
-                                {{-- Equal group: summary when onlyDiff=true --}}
-                                <template x-if="onlyDiff">
-                                    <tr class="bg-gray-50 border-t border-b border-gray-200">
-                                        <td colspan="4" class="px-4 py-1.5 text-gray-400 text-xs select-none">
-                                            ··· {{ $equalCount }} unchanged line{{ $equalCount !== 1 ? 's' : '' }}
-                                        </td>
-                                    </tr>
-                                </template>
+                                {{-- Equal group: individual lines, hidden when showing only differences --}}
+                                @foreach($group['items'] as $item)
+                                <tr class="hover:bg-gray-50" x-show="!onlyDiff">
+                                    <td class="w-10 text-right pr-3 pl-2 py-0.5 text-gray-300 select-none border-r border-gray-100">{{ $item['lineA'] }}</td>
+                                    <td class="w-10 text-right pr-3 py-0.5 text-gray-300 select-none border-r border-gray-100">{{ $item['lineB'] }}</td>
+                                    <td class="w-6 py-0.5 border-r border-gray-100 select-none"></td>
+                                    <td class="pl-4 pr-6 py-0.5 text-gray-500 whitespace-pre-wrap break-all">{{ $item['line'] }}</td>
+                                </tr>
+                                @endforeach
+                                {{-- Equal group: summary row, visible only when showing differences --}}
+                                <tr class="bg-gray-50 border-t border-b border-gray-200" x-show="onlyDiff">
+                                    <td colspan="4" class="px-4 py-1.5 text-gray-400 text-xs select-none">
+                                        ··· {{ $equalCount }} unchanged line{{ $equalCount !== 1 ? 's' : '' }}
+                                    </td>
+                                </tr>
                             @endif
 
                         @endforeach

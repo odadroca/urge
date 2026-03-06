@@ -24,36 +24,6 @@
                 <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{{ session('error') }}</div>
             @endif
 
-            {{-- Compare bar (visible when 2 selected) --}}
-            <div x-show="selected.length === 2" x-cloak
-                 class="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3">
-                <p class="text-sm text-indigo-700">
-                    Comparing
-                    <strong x-text="'v' + Math.min(...selected)"></strong>
-                    and
-                    <strong x-text="'v' + Math.max(...selected)"></strong>
-                </p>
-                <div class="flex gap-2">
-                    <button @click="selected = []"
-                        class="px-3 py-1.5 text-xs text-indigo-600 border border-indigo-300 rounded-md hover:bg-white">
-                        Clear
-                    </button>
-                    <button @click="window.location = '{{ route('prompts.versions.compare', $prompt) }}?v1=' + Math.min(...selected) + '&v2=' + Math.max(...selected)"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                            <path stroke-linecap="round" d="M8 7h12M8 12h8M8 17h12"/>
-                        </svg>
-                        View diff
-                    </button>
-                </div>
-            </div>
-
-            {{-- Hint when 1 selected --}}
-            <div x-show="selected.length === 1" x-cloak
-                 class="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
-                Select one more version to compare.
-            </div>
-
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 @if($versions->isEmpty())
                     <div class="p-12 text-center text-gray-500">No versions yet.</div>
@@ -119,9 +89,25 @@
                 @endif
             </div>
 
-            @if($versions->count() >= 2)
-            <p class="text-xs text-gray-400 text-center">Check two versions to compare them.</p>
-            @endif
+            {{-- Sticky compare bar --}}
+            <div x-show="selected.length > 0" x-cloak
+                 class="fixed bottom-0 inset-x-0 z-40 bg-indigo-600 text-white px-6 py-3 flex items-center justify-between shadow-lg">
+                <span class="text-sm font-medium">
+                    <span x-text="selected.length"></span> version<span x-show="selected.length !== 1">s</span> selected
+                    <span x-show="selected.length < 2" class="text-indigo-300 font-normal"> — pick one more to compare</span>
+                </span>
+                <div class="flex items-center gap-3">
+                    <button @click="selected = []" class="text-sm text-indigo-200 hover:text-white transition-colors">Clear</button>
+                    <button x-show="selected.length === 2"
+                            @click="window.location = '{{ route('prompts.versions.compare', $prompt) }}?v1=' + Math.min(...selected) + '&v2=' + Math.max(...selected)"
+                            class="inline-flex items-center gap-1.5 text-sm bg-white text-indigo-600 font-medium px-4 py-1.5 rounded-md hover:bg-indigo-50 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" d="M8 7h12M8 12h8M8 17h12"/>
+                        </svg>
+                        View diff →
+                    </button>
+                </div>
+            </div>
 
             {{-- Environments --}}
             @if($versions->isNotEmpty())
