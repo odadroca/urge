@@ -119,7 +119,10 @@ documentation/                     # This folder
 | `tags` | json NULLABLE | Array of tag strings for organisation and filtering |
 | `active_version_id` | bigint NULLABLE FK → prompt_versions.id | Points to the published version |
 | `created_by` | bigint FK → users.id | |
+| `deleted_at` | timestamp NULLABLE | Set on archive (soft-delete); NULL means the prompt is active |
 | `created_at / updated_at` | timestamp | |
+
+Prompts use **soft deletes** (`SoftDeletes` trait). Archiving a prompt sets `deleted_at`; restoring clears it. Soft-deleted prompts are excluded from all API responses and the default web list. The slug is reserved even after soft-deletion (slug uniqueness check uses `withTrashed()`) so that slugs are never recycled.
 
 The slug is generated once at creation time (`Str::slug($name)` with a numeric suffix if taken) and is **locked permanently**. This guarantees API consumers always use the same URL regardless of prompt renames.
 
@@ -131,15 +134,37 @@ The slug is generated once at creation time (`Str::slug($name)` with a numeric s
 | `id` | bigint PK | |
 | `prompt_id` | bigint FK → prompts.id CASCADE | |
 | `version_number` | unsigned int | Scoped per prompt (1, 2, 3…). Unique per prompt. |
-| `content` | longtext | Prompt text with `{{variable}}` placeholders |
+| `content` | longtext | Prompt text with `{{variable}}` and `{{>slug}}` placeholders |
 | `commit_message` | string(500) NULLABLE | |
-| `variables` | json | Extracted variable names, auto-populated on save |
+| `variables` | json | Extracted `{{variable}}` names, auto-populated on save |
+| `variable_metadata` | json NULLABLE | Per-variable metadata: `type`, `description`, `default`, and (for enum) `options` |
+| `includes` | json NULLABLE | Extracted `{{>slug}}` include references, auto-populated on save |
 | `created_by` | bigint FK → users.id | |
 | `created_at` | timestamp | **No `updated_at`** — versions are immutable |
 
 **Immutability** is enforced at the model level: `PromptVersion::updating()` throws a `LogicException`. Once written, a version record cannot be changed.
 
 **Version numbering** uses a database transaction with `MAX(version_number) + 1` scoped to `prompt_id`, ensuring no gaps or races (SQLite serialises writes at the table level).
+
+**`variable_metadata` structure** — each key is a variable name, and the value is an object:
+
+```json
+{
+  "customer_name": {
+    "type": "string",
+    "description": "Customer's full name",
+    "default": null
+  },
+  "status": {
+    "type": "enum",
+    "description": "Order status",
+    "default": "pending",
+    "options": ["pending", "shipped", "delivered"]
+  }
+}
+```
+
+Valid `type` values: `string`, `text`, `number`, `boolean`, `enum`. For `enum`, `options` holds the list of allowed values shown in the UI.
 
 ---
 
@@ -155,6 +180,29 @@ The slug is generated once at creation time (`Str::slug($name)` with a numeric s
 | `last_used_at` | timestamp NULLABLE | Updated on each authenticated request |
 | `expires_at` | timestamp NULLABLE | NULL means never expires |
 | `created_at / updated_at` | timestamp | |
+
+---
+
+### `api_key_prompt` (pivot)
+| Column | Type | Notes |
+|---|---|---|
+| `api_key_id` | bigint FK → api_keys.id CASCADE | |
+| `prompt_id` | bigint FK → prompts.id CASCADE | |
+
+Joins an API key to the specific prompts it is allowed to access. When an API key has no rows in this table, it is **unscoped** and can access all prompts. When it has one or more rows, it is **scoped** and only those prompts are accessible (others return `403 KEY_SCOPE_DENIED`).
+
+---
+
+### `prompt_environments`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `prompt_id` | bigint FK → prompts.id CASCADE | |
+| `name` | string(50) | Environment name (e.g. `production`, `staging`, any custom string) |
+| `prompt_version_id` | bigint FK → prompt_versions.id CASCADE | The version assigned to this environment |
+| `created_at / updated_at` | timestamp | |
+
+Unique constraint on `(prompt_id, name)` — each prompt can only have one assignment per environment name. Used to resolve the `"environment"` parameter in the render API endpoint.
 
 ---
 
@@ -273,6 +321,11 @@ The `prompts.active_version_id` → `prompt_versions.id` FK creates a circular d
 14. `2024_01_03_000002` — create library_entries
 15. `2024_01_04_000001` — create stories
 16. `2024_01_04_000002` — create story_steps
+17. `2024_01_05_000001` — add `deleted_at` (soft deletes) to prompts
+18. `2024_01_05_000002` — create api_key_prompt pivot table (scoped keys)
+19. `2024_01_05_000003` — add `variable_metadata` column to prompt_versions
+20. `2024_01_05_000004` — create prompt_environments table
+21. `2024_01_05_000005` — add `includes` column to prompt_versions
 
 ---
 
@@ -322,12 +375,29 @@ Permissions are enforced via Laravel Policies registered in `AppServiceProvider`
 
 ## Template Engine
 
-`App\Services\TemplateEngine` handles `{{variable}}` syntax.
+`App\Services\TemplateEngine` handles both `{{variable}}` substitution and `{{>slug}}` prompt inclusion.
 
+### Variable syntax
 - **Pattern:** `/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/`
 - Variable names must start with a letter or underscore (rejects `{{123}}`, `{{has space}}`)
-- `extractVariables(string $content): array` — returns unique variable names found in the content
-- `render(string $content, array $variables): array` — substitutes provided values; leaves unmatched placeholders untouched and returns them in `variables_missing`
+- `extractVariables(string $content): array` — returns unique variable names found in the content (does not follow includes)
+
+### Include syntax
+- **Pattern:** `/\{\{>([a-zA-Z0-9_-]+)\}\}/`
+- Include slugs may contain letters, digits, underscores, and hyphens
+- `extractIncludes(string $content): array` — returns unique include slugs found in the content
+
+### Render pipeline
+`render(string $content, array $variables, ?array $metadata, ?string $environment): array`
+
+1. **Resolve includes** — recursively expand all `{{>slug}}` tags by substituting the referenced prompt's content (using the environment version if specified, otherwise the active version)
+2. **Merge metadata** — variable metadata from included prompts is merged with the parent's metadata (parent takes precedence on conflicts)
+3. **Substitute variables** — replace `{{variable}}` placeholders; apply defaults from metadata for missing variables; leave unmatched placeholders in place
+4. **Return** `['rendered', 'variables_used', 'variables_missing', 'includes_resolved']`
+
+**Circular reference detection:** The include resolver tracks the current inclusion chain and throws a `RuntimeException` if a slug appears twice in the chain. The API catches this and returns `422 INCLUDE_ERROR`.
+
+**Max include depth:** Controlled by `config('urge.max_include_depth')` (default 10, configurable via `URGE_MAX_INCLUDE_DEPTH`).
 
 ---
 

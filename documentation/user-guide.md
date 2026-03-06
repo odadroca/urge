@@ -102,9 +102,15 @@ Variables and includes are extracted automatically — you will see them listed 
 
 When creating a new version, you can add metadata to each detected variable:
 
-- **Type** — a hint for consumers (`string`, `number`, `boolean`, `json`, `date`, `enum`)
-- **Default** — a fallback value used when the variable is not provided during rendering
+- **Type** — a hint for consumers; valid values:
+  - `string` — a short single-line text value
+  - `text` — a longer multi-line text value
+  - `number` — a numeric value
+  - `boolean` — `true` or `false`
+  - `enum` — one of a fixed set of options (specify the allowed values in the **Options** field)
+- **Default** — a fallback value used automatically when the variable is not provided during rendering; if set, the variable will appear in `variables_used` (not `variables_missing`) even when omitted
 - **Description** — a short explanation of what the variable expects
+- **Options** — for `enum` type only: a list of allowed values shown as a dropdown in the UI and returned as `options` in the API response
 
 Metadata is optional. If the previous version had metadata, it is pre-populated for convenience.
 

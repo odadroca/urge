@@ -146,6 +146,7 @@ See [`documentation/api-reference.md`](documentation/api-reference.md) for the f
 | [`documentation/architecture.md`](documentation/architecture.md) | Data model, file structure, auth flows, design decisions |
 | [`documentation/api-reference.md`](documentation/api-reference.md) | Full API endpoint reference with examples |
 | [`documentation/user-guide.md`](documentation/user-guide.md) | Non-technical walkthrough for web UI users |
+| [`documentation/configuration-reference.md`](documentation/configuration-reference.md) | All environment variables and their defaults |
 | [`documentation/claude_skill.md`](documentation/claude_skill.md) | Ready-to-install Claude Code skill for URGE API access |
 
 ---

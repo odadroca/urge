@@ -306,7 +306,6 @@ GET /api/v1/prompts/{slug}/versions/{version_number}
         "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
         "issue": {"type": "string", "description": "The issue description", "default": null}
       },
-      "includes": [],
       "created_by": "Alice",
       "created_at": "2026-03-05T08:34:35.000000Z",
       "is_active": false
@@ -314,6 +313,8 @@ GET /api/v1/prompts/{slug}/versions/{version_number}
   }
 }
 ```
+
+> **Note:** Unlike `GET /prompts/{slug}` (active version) and `GET /prompts/{slug}/versions` (version list), this endpoint does not return `includes`. Use the list endpoint to see include references per version.
 
 **Response 404** — prompt or version not found.
 
@@ -354,11 +355,27 @@ Content-Type: application/json
     "rendered": "Dear Alice, thank you for contacting us about billing discrepancy.",
     "prompt_slug": "support-reply",
     "version_number": 2,
+    "environment": null,
     "variables_used": ["customer_name", "issue"],
-    "variables_missing": []
+    "variables_missing": [],
+    "variable_metadata": {
+      "customer_name": {"type": "string", "description": "Customer's full name", "default": null},
+      "issue": {"type": "string", "description": "The issue description", "default": null}
+    }
   }
 }
 ```
+
+| Response field | Type | Notes |
+|---|---|---|
+| `rendered` | string | Fully rendered prompt text |
+| `prompt_slug` | string | The slug that was rendered |
+| `version_number` | integer | Version number that was used |
+| `environment` | string\|null | The environment name if `environment` was specified; otherwise `null` |
+| `variables_used` | array | Variable names that were successfully substituted (including those resolved from defaults) |
+| `variables_missing` | array | Variable names present in the template that were not provided and had no default |
+| `variable_metadata` | object\|null | Metadata for the version's variables, if any was configured |
+| `includes_resolved` | array | Slugs of any included prompts that were expanded; only present when at least one include was resolved |
 
 **Variable defaults**
 
@@ -383,8 +400,10 @@ If a variable is present in the prompt content but not provided in the request a
     "rendered": "Dear Alice, thank you for contacting us about {{issue}}.",
     "prompt_slug": "support-reply",
     "version_number": 2,
+    "environment": null,
     "variables_used": ["customer_name"],
-    "variables_missing": ["issue"]
+    "variables_missing": ["issue"],
+    "variable_metadata": null
   }
 }
 ```
