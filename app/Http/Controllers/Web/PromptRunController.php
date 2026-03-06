@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\LibraryEntry;
 use App\Models\LlmProvider;
 use App\Models\Prompt;
 use App\Models\PromptRun;
@@ -44,8 +45,9 @@ class PromptRunController extends Controller
         $validated = $request->validate([
             'variables'   => ['sometimes', 'array'],
             'variables.*' => ['nullable', 'string'],
-            'providers'   => ['required', 'array', 'min:1'],
-            'providers.*' => ['integer', 'exists:llm_providers,id'],
+            'providers'        => ['required', 'array', 'min:1'],
+            'providers.*'      => ['integer', 'exists:llm_providers,id'],
+            'save_to_library'  => ['sometimes', 'boolean'],
         ]);
 
         $variables = $validated['variables'] ?? [];
@@ -88,6 +90,23 @@ class PromptRunController extends Controller
                     'error_message'   => $e->getMessage(),
                     'duration_ms'     => 0,
                 ]);
+            }
+        }
+
+        // Auto-save successful responses to Library
+        if (!empty($validated['save_to_library'])) {
+            $run->load('responses');
+            foreach ($run->responses as $response) {
+                if ($response->status === 'success') {
+                    LibraryEntry::create([
+                        'prompt_id'         => $run->prompt_id,
+                        'prompt_version_id' => $run->prompt_version_id,
+                        'llm_provider_id'   => $response->llm_provider_id,
+                        'model_used'        => $response->model_used,
+                        'response_text'     => $response->response_text,
+                        'created_by'        => auth()->id(),
+                    ]);
+                }
             }
         }
 

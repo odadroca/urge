@@ -88,6 +88,22 @@
                     @enderror
                 </div>
 
+                {{-- Auto-save to Library --}}
+                <div class="bg-white shadow-sm sm:rounded-lg p-6">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="hidden" name="save_to_library" value="0">
+                        <input type="checkbox"
+                               name="save_to_library"
+                               value="1"
+                               checked
+                               class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <span class="font-medium text-gray-800 text-sm">Save successful responses to Library</span>
+                            <p class="text-xs text-gray-400 mt-0.5">Automatically add each successful response as a library entry.</p>
+                        </div>
+                    </label>
+                </div>
+
                 <div class="flex justify-end gap-3">
                     <a href="{{ route('prompts.show', $prompt) }}" class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">Cancel</a>
                     <button type="submit"
