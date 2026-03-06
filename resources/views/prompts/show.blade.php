@@ -31,6 +31,22 @@
                 <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
             @endif
 
+            @if($prompt->trashed())
+            <div class="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded flex items-center justify-between">
+                <span>This prompt was archived on {{ $prompt->deleted_at->format('Y-m-d') }}.</span>
+                <div class="flex gap-2">
+                    <form method="POST" action="{{ route('prompts.restore', $prompt) }}">
+                        @csrf
+                        <button type="submit" class="px-3 py-1 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700">Restore</button>
+                    </form>
+                    <form method="POST" action="{{ route('prompts.force-delete', $prompt) }}" onsubmit="return confirm('Permanently delete this prompt? This cannot be undone.')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700">Delete permanently</button>
+                    </form>
+                </div>
+            </div>
+            @endif
+
             {{-- Metadata --}}
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
                 @if($prompt->description)
@@ -126,15 +142,17 @@ Content-Type: application/json
 {"variables": { {{ $prompt->activeVersion?->variables ? '"' . implode('": "...", "', $prompt->activeVersion->variables ?? []) . '": "..."' : '' }} }}</pre>
             </div>
 
+            @if(!$prompt->trashed())
             @can('delete', $prompt)
             <div class="bg-white shadow-sm sm:rounded-lg p-6 border-t-4 border-red-300">
                 <h3 class="font-semibold text-red-700 mb-2">Danger Zone</h3>
-                <form method="POST" action="{{ route('prompts.destroy', $prompt) }}" onsubmit="return confirm('Delete this prompt and all its versions?')">
+                <form method="POST" action="{{ route('prompts.destroy', $prompt) }}" onsubmit="return confirm('Archive this prompt? It can be restored by an admin.')">
                     @csrf @method('DELETE')
-                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">Delete Prompt</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700">Archive Prompt</button>
                 </form>
             </div>
             @endcan
+            @endif
         </div>
     </div>
 </x-app-layout>

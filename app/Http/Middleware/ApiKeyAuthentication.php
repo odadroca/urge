@@ -44,6 +44,8 @@ class ApiKeyAuthentication
             ->where('id', $apiKey->id)
             ->update(['last_used_at' => now()]);
 
+        $request->attributes->set('api_key_id', $apiKey->id);
+
         Auth::setUser($user);
 
         return $next($request);

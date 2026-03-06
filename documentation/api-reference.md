@@ -32,6 +32,71 @@ API keys are created and managed through the web UI under **API Keys**.
 
 ---
 
+## Health Check
+
+A public endpoint that requires no authentication:
+
+```
+GET /api/v1/health
+```
+
+**Response 200** — database is reachable:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-03-06T12:00:00.000000Z",
+  "database": true
+}
+```
+
+**Response 503** — database is unreachable:
+
+```json
+{
+  "status": "error",
+  "timestamp": "2026-03-06T12:00:00.000000Z",
+  "database": false
+}
+```
+
+No `Authorization` header is required. This endpoint is not rate limited.
+
+---
+
+## Rate Limiting
+
+All authenticated API endpoints are rate limited per API key. The default limit is **60 requests per 60 seconds**.
+
+When the limit is exceeded, the API returns HTTP `429`:
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too many requests. Try again in 42 seconds."
+  }
+}
+```
+
+### Rate limit headers
+
+| Header | Description |
+|---|---|
+| `Retry-After` | Seconds until the rate limit resets |
+| `X-RateLimit-Remaining` | Number of requests remaining in the current window |
+
+Rate limits are tracked independently per API key. Two different API keys each get their own quota.
+
+The rate limit can be configured via environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `URGE_API_RATE_LIMIT` | `60` | Maximum requests per window |
+| `URGE_API_RATE_WINDOW` | `60` | Window duration in seconds |
+
+---
+
 ## Error Response Format
 
 All errors follow this shape:
@@ -53,7 +118,9 @@ All errors follow this shape:
 | 401 | Unauthenticated |
 | 404 | Resource not found |
 | 422 | Validation error |
+| 429 | Rate limit exceeded |
 | 500 | Server error |
+| 503 | Service unavailable (health check) |
 
 ---
 
@@ -61,7 +128,7 @@ All errors follow this shape:
 
 ### List prompts
 
-Returns all prompts that have an active version set.
+Returns all prompts that have an active version set. Archived (soft-deleted) prompts are excluded.
 
 ```
 GET /api/v1/prompts
@@ -121,7 +188,7 @@ GET /api/v1/prompts/{slug}
 }
 ```
 
-**Response 404** — prompt not found or has no active version.
+**Response 404** — prompt not found, has no active version, or has been archived.
 
 ---
 
@@ -352,3 +419,4 @@ curl -X POST https://your-domain.com/api/v1/prompts/support-reply/render \
 - The API is **read-only**. Creating or editing prompts is done through the web UI only.
 - API keys inherit the role of their owner. All roles (admin, editor, viewer) have identical API access.
 - The API does not implement pagination. All prompts are returned in a single response.
+- **Archived prompts** (soft-deleted via the web UI) are invisible to all API endpoints. Fetching an archived prompt by slug returns `404`. Admins can restore archived prompts through the web UI.

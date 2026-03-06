@@ -12,8 +12,13 @@ class PromptController extends Controller
     public function index(Request $request)
     {
         $tag = $request->query('tag');
+        $showArchived = $request->boolean('archived') && auth()->user()?->isAdmin();
 
         $query = Prompt::with('activeVersion', 'creator')->latest();
+
+        if ($showArchived) {
+            $query->withTrashed();
+        }
 
         if ($tag) {
             $query->whereJsonContains('tags', $tag);
@@ -30,7 +35,7 @@ class PromptController extends Controller
             ->values()
             ->all();
 
-        return view('prompts.index', compact('prompts', 'allTags', 'tag'));
+        return view('prompts.index', compact('prompts', 'allTags', 'tag', 'showArchived'));
     }
 
     public function create()
@@ -62,6 +67,10 @@ class PromptController extends Controller
 
     public function show(Prompt $prompt)
     {
+        if ($prompt->trashed() && !auth()->user()?->isAdmin()) {
+            abort(404);
+        }
+
         $prompt->load('activeVersion.creator', 'creator');
 
         $libraryCount = $prompt->activeVersion
@@ -102,7 +111,23 @@ class PromptController extends Controller
         $this->authorize('delete', $prompt);
         $prompt->delete();
 
-        return redirect()->route('prompts.index')->with('success', 'Prompt deleted.');
+        return redirect()->route('prompts.index')->with('success', 'Prompt archived.');
+    }
+
+    public function restore(Prompt $prompt)
+    {
+        $this->authorize('restore', $prompt);
+        $prompt->restore();
+
+        return redirect()->route('prompts.show', $prompt)->with('success', 'Prompt restored.');
+    }
+
+    public function forceDelete(Prompt $prompt)
+    {
+        $this->authorize('forceDelete', $prompt);
+        $prompt->forceDelete();
+
+        return redirect()->route('prompts.index')->with('success', 'Prompt permanently deleted.');
     }
 
     private function normalizeTags(array $tags): array

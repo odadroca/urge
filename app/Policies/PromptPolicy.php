@@ -41,4 +41,14 @@ class PromptPolicy
     {
         return $user->isEditor();
     }
+
+    public function restore(User $user, Prompt $prompt): bool
+    {
+        return $user->isAdmin();
+    }
+
+    public function forceDelete(User $user, Prompt $prompt): bool
+    {
+        return $user->isAdmin();
+    }
 }

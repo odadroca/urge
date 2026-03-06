@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Prompt extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'slug',
@@ -27,7 +30,7 @@ class Prompt extends Model
                 $base = Str::slug($prompt->name);
                 $slug = $base;
                 $counter = 1;
-                while (static::where('slug', $slug)->exists()) {
+                while (static::withTrashed()->where('slug', $slug)->exists()) {
                     $slug = $base . '-' . $counter++;
                 }
                 $prompt->slug = $slug;

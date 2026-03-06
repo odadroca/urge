@@ -24,7 +24,20 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Prompts
-    Route::resource('prompts', PromptController::class);
+    Route::resource('prompts', PromptController::class)->except(['show']);
+    Route::get('prompts/{prompt}', [PromptController::class, 'show'])
+        ->withTrashed()
+        ->name('prompts.show');
+
+    // Prompt soft-delete actions (admin only, resolve trashed models)
+    Route::post('prompts/{prompt}/restore', [PromptController::class, 'restore'])
+        ->middleware('role:admin')
+        ->withTrashed()
+        ->name('prompts.restore');
+    Route::delete('prompts/{prompt}/force-delete', [PromptController::class, 'forceDelete'])
+        ->middleware('role:admin')
+        ->withTrashed()
+        ->name('prompts.force-delete');
 
     // Prompt versions
     Route::get('prompts/{prompt}/versions', [PromptVersionController::class, 'index'])
