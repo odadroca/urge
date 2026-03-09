@@ -33,17 +33,45 @@
             </div>
             @endif
 
+            {{-- Category filter bar --}}
+            @if($categories->isNotEmpty())
+            <div class="mb-4 flex flex-wrap items-center gap-2">
+                <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mr-1">Category:</span>
+                <a href="{{ route('prompts.index', array_filter(['tag' => $tag])) }}"
+                   class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition
+                          {{ !$categorySlug ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400' }}">
+                    All
+                </a>
+                @foreach($categories as $cat)
+                <a href="{{ route('prompts.index', array_filter(['category' => $cat->slug, 'tag' => $tag])) }}"
+                   class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition
+                          {{ $categorySlug === $cat->slug ? 'bg-' . $cat->color . '-600 text-white border-' . $cat->color . '-600' : 'bg-' . $cat->color . '-50 text-' . $cat->color . '-700 border-' . $cat->color . '-200 hover:border-' . $cat->color . '-400' }}">
+                    {{ $cat->name }}
+                    <span class="ml-1 opacity-70">{{ $cat->prompts_count }}</span>
+                </a>
+                @endforeach
+                @if($uncategorizedCount > 0)
+                <a href="{{ route('prompts.index', array_filter(['category' => 'uncategorized', 'tag' => $tag])) }}"
+                   class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition
+                          {{ $categorySlug === 'uncategorized' ? 'bg-gray-600 text-white border-gray-600' : 'bg-white text-gray-500 border-gray-300 hover:border-gray-400' }}">
+                    Uncategorized
+                    <span class="ml-1 opacity-70">{{ $uncategorizedCount }}</span>
+                </a>
+                @endif
+            </div>
+            @endif
+
             {{-- Tag filter bar --}}
             @if(!empty($allTags))
             <div class="mb-4 flex flex-wrap items-center gap-2">
-                <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mr-1">Filter:</span>
-                <a href="{{ route('prompts.index') }}"
+                <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mr-1">Tag:</span>
+                <a href="{{ route('prompts.index', array_filter(['category' => $categorySlug])) }}"
                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition
                           {{ !$tag ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400' }}">
                     All
                 </a>
                 @foreach($allTags as $t)
-                <a href="{{ route('prompts.index', ['tag' => $t]) }}"
+                <a href="{{ route('prompts.index', array_filter(['tag' => $t, 'category' => $categorySlug])) }}"
                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition
                           {{ $tag === $t ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-700 border-purple-200 hover:border-purple-400' }}">
                     {{ $t }}
@@ -97,7 +125,12 @@
                                 </a>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="text-indigo-600 font-medium">{{ $prompt->name }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-indigo-600 font-medium">{{ $prompt->name }}</span>
+                                    @if($prompt->category)
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-{{ $prompt->category->color }}-100 text-{{ $prompt->category->color }}-700">{{ $prompt->category->name }}</span>
+                                    @endif
+                                </div>
                                 @if($prompt->description)
                                 <p class="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{{ $prompt->description }}</p>
                                 @endif

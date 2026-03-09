@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Prompt;
 use App\Models\PromptVersion;
 use App\Services\VersioningService;
@@ -19,8 +20,9 @@ class DesignerController extends Controller
         $allPrompts = Prompt::whereNull('deleted_at')
             ->where('id', '!=', $prompt->id)
             ->whereNotNull('active_version_id')
+            ->with('category')
             ->orderBy('name')
-            ->get(['id', 'name', 'slug']);
+            ->get(['id', 'name', 'slug', 'category_id']);
 
         $knownVariables = PromptVersion::whereNotNull('variables')
             ->pluck('variables')
@@ -29,11 +31,12 @@ class DesignerController extends Controller
             ->sort()
             ->values();
 
+        $includeCategories = $this->groupPromptsByCategory($allPrompts);
         $initialBlocks = [];
         $previousMetadata = [];
 
         return view('prompts.versions.designer', compact(
-            'prompt', 'allPrompts', 'knownVariables', 'initialBlocks', 'previousMetadata'
+            'prompt', 'allPrompts', 'knownVariables', 'includeCategories', 'initialBlocks', 'previousMetadata'
         ));
     }
 
@@ -48,8 +51,9 @@ class DesignerController extends Controller
         $allPrompts = Prompt::whereNull('deleted_at')
             ->where('id', '!=', $prompt->id)
             ->whereNotNull('active_version_id')
+            ->with('category')
             ->orderBy('name')
-            ->get(['id', 'name', 'slug']);
+            ->get(['id', 'name', 'slug', 'category_id']);
 
         $knownVariables = PromptVersion::whereNotNull('variables')
             ->pluck('variables')
@@ -58,11 +62,12 @@ class DesignerController extends Controller
             ->sort()
             ->values();
 
+        $includeCategories = $this->groupPromptsByCategory($allPrompts);
         $initialBlocks = $this->parseContentToBlocks($promptVersion->content);
         $previousMetadata = $promptVersion->variable_metadata ?? [];
 
         return view('prompts.versions.designer', compact(
-            'prompt', 'allPrompts', 'knownVariables', 'initialBlocks', 'previousMetadata', 'promptVersion'
+            'prompt', 'allPrompts', 'knownVariables', 'includeCategories', 'initialBlocks', 'previousMetadata', 'promptVersion'
         ));
     }
 
@@ -86,6 +91,27 @@ class DesignerController extends Controller
         return redirect()
             ->route('prompts.versions.show', [$prompt, $version->version_number])
             ->with('success', "Version {$version->version_number} created via designer.");
+    }
+
+    private function groupPromptsByCategory($allPrompts): array
+    {
+        $grouped = [];
+
+        foreach ($allPrompts as $p) {
+            $key = $p->category ? $p->category->name : 'Uncategorized';
+            $color = $p->category ? $p->category->color : 'gray';
+            $grouped[$key] ??= ['color' => $color, 'prompts' => []];
+            $grouped[$key]['prompts'][] = $p;
+        }
+
+        // Sort: named categories first (alphabetically), Uncategorized last
+        uksort($grouped, function ($a, $b) {
+            if ($a === 'Uncategorized') return 1;
+            if ($b === 'Uncategorized') return -1;
+            return strcasecmp($a, $b);
+        });
+
+        return $grouped;
     }
 
     /**

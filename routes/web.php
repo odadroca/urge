@@ -104,9 +104,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('stories/{story}/steps/{step}/move-up', [StoryStepController::class, 'moveUp'])->name('story-steps.move-up');
     Route::post('stories/{story}/steps/{step}/move-down', [StoryStepController::class, 'moveDown'])->name('story-steps.move-down');
 
-    // Admin: users + LLM providers
+    // Admin: users, categories + LLM providers
     Route::middleware(['role:admin'])->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+        Route::resource('categories', \App\Http\Controllers\Web\CategoryController::class)->except(['show']);
 
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('llm-providers', [LlmProviderController::class, 'index'])->name('llm-providers.index');

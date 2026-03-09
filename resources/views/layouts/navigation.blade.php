@@ -28,6 +28,9 @@
                         {{ __('API Keys') }}
                     </x-nav-link>
                     @if(auth()->user()->isAdmin())
+                    <x-nav-link :href="route('categories.index')" :active="request()->routeIs('categories.*')">
+                        {{ __('Categories') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
                         {{ __('Users') }}
                     </x-nav-link>

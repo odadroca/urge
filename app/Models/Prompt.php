@@ -14,6 +14,7 @@ class Prompt extends Model
         'name',
         'slug',
         'description',
+        'category_id',
         'tags',
         'active_version_id',
         'created_by',
@@ -36,6 +37,11 @@ class Prompt extends Model
                 $prompt->slug = $slug;
             }
         });
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function activeVersion()

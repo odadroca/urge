@@ -68,18 +68,22 @@
                                 Includes
                             </p>
                             <div x-ref="paletteIncludes" class="flex flex-col gap-1.5">
-                                @foreach($allPrompts as $p)
-                                <div data-block-type="include" data-slug="{{ $p->slug }}" data-name="{{ $p->name }}"
-                                     @click="addInclude('{{ $p->slug }}', '{{ addslashes($p->name) }}')"
-                                     class="cursor-grab active:cursor-grabbing inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition select-none">
-                                    <span>&#123;&#123;&gt;{{ $p->slug }}&#125;&#125;</span>
-                                    <span class="text-emerald-500 font-sans text-[10px] truncate max-w-[8rem]">{{ $p->name }}</span>
+                                @forelse($includeCategories as $catName => $catGroup)
+                                <div class="mt-1 first:mt-0">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-{{ $catGroup['color'] }}-100 text-{{ $catGroup['color'] }}-700 mb-1">{{ $catName }}</span>
+                                    @foreach($catGroup['prompts'] as $p)
+                                    <div data-block-type="include" data-slug="{{ $p->slug }}" data-name="{{ $p->name }}"
+                                         @click="addInclude('{{ $p->slug }}', '{{ addslashes($p->name) }}')"
+                                         class="cursor-grab active:cursor-grabbing inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition select-none">
+                                        <span>&#123;&#123;&gt;{{ $p->slug }}&#125;&#125;</span>
+                                        <span class="text-emerald-500 font-sans text-[10px] truncate max-w-[8rem]">{{ $p->name }}</span>
+                                    </div>
+                                    @endforeach
                                 </div>
-                                @endforeach
+                                @empty
+                                <p class="text-xs text-gray-400 italic">No other prompts available.</p>
+                                @endforelse
                             </div>
-                            @if($allPrompts->isEmpty())
-                            <p class="text-xs text-gray-400 italic">No other prompts available.</p>
-                            @endif
                         </div>
                     </div>
 

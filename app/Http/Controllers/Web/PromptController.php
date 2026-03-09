@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\LibraryEntry;
 use App\Models\Prompt;
 use Illuminate\Http\Request;
@@ -12,9 +13,10 @@ class PromptController extends Controller
     public function index(Request $request)
     {
         $tag = $request->query('tag');
+        $categorySlug = $request->query('category');
         $showArchived = $request->boolean('archived') && auth()->user()?->isAdmin();
 
-        $query = Prompt::with('activeVersion', 'creator')->latest();
+        $query = Prompt::with('activeVersion', 'creator', 'category')->latest();
 
         if ($showArchived) {
             $query->withTrashed();
@@ -22,6 +24,14 @@ class PromptController extends Controller
 
         if ($tag) {
             $query->whereJsonContains('tags', $tag);
+        }
+
+        if ($categorySlug) {
+            if ($categorySlug === 'uncategorized') {
+                $query->whereNull('category_id');
+            } else {
+                $query->whereHas('category', fn ($q) => $q->where('slug', $categorySlug));
+            }
         }
 
         $prompts = $query->paginate(20)->withQueryString();
@@ -35,13 +45,18 @@ class PromptController extends Controller
             ->values()
             ->all();
 
-        return view('prompts.index', compact('prompts', 'allTags', 'tag', 'showArchived'));
+        $categories = Category::withCount('prompts')->orderBy('sort_order')->orderBy('name')->get();
+        $uncategorizedCount = Prompt::whereNull('category_id')->count();
+
+        return view('prompts.index', compact('prompts', 'allTags', 'tag', 'showArchived', 'categories', 'categorySlug', 'uncategorizedCount'));
     }
 
     public function create()
     {
         $this->authorize('create', Prompt::class);
-        return view('prompts.create');
+        $categories = Category::orderBy('sort_order')->orderBy('name')->get();
+
+        return view('prompts.create', compact('categories'));
     }
 
     public function store(Request $request)
@@ -51,6 +66,7 @@ class PromptController extends Controller
         $data = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'category_id' => ['nullable', 'exists:categories,id'],
             'tags'        => ['nullable', 'array'],
             'tags.*'      => ['string', 'max:50'],
         ]);
@@ -58,6 +74,7 @@ class PromptController extends Controller
         $prompt = Prompt::create([
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
+            'category_id' => $data['category_id'] ?? null,
             'tags'        => $this->normalizeTags($data['tags'] ?? []),
             'created_by'  => auth()->id(),
         ]);
@@ -83,7 +100,9 @@ class PromptController extends Controller
     public function edit(Prompt $prompt)
     {
         $this->authorize('update', $prompt);
-        return view('prompts.edit', compact('prompt'));
+        $categories = Category::orderBy('sort_order')->orderBy('name')->get();
+
+        return view('prompts.edit', compact('prompt', 'categories'));
     }
 
     public function update(Request $request, Prompt $prompt)
@@ -93,6 +112,7 @@ class PromptController extends Controller
         $data = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'category_id' => ['nullable', 'exists:categories,id'],
             'tags'        => ['nullable', 'array'],
             'tags.*'      => ['string', 'max:50'],
         ]);
@@ -100,6 +120,7 @@ class PromptController extends Controller
         $prompt->update([
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
+            'category_id' => $data['category_id'] ?? null,
             'tags'        => $this->normalizeTags($data['tags'] ?? []),
         ]);
 

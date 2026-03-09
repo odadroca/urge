@@ -16,6 +16,16 @@
                         <p class="mt-1 text-xs text-gray-400">Slug: <code class="font-mono">{{ $prompt->slug }}</code> (locked — changing the name does not change the slug)</p>
                     </div>
                     <div class="mb-5">
+                        <label for="category_id" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select name="category_id" id="category_id"
+                            class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Uncategorized</option>
+                            @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}" {{ old('category_id', $prompt->category_id) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-5">
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                         <textarea name="description" id="description" rows="3"
                             class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">{{ old('description', $prompt->description) }}</textarea>
