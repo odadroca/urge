@@ -2,32 +2,49 @@
 
 ## Project Overview
 
-URGE v2 is a self-hosted prompt management system for LLM developers. Ground-up rebuild from v1 using Livewire 3 for a reactive single-screen workspace experience.
+URGE v2 is a self-hosted **prompt registry and version control system** that serves two audiences:
+1. **Humans** via a Livewire 3 web UI (single-screen workspace)
+2. **LLMs** via a REST API, MCP server, CustomGPT actions, and Claude Skills
+
+URGE is the prompt memory layer that sits behind any LLM. LLMs pull prompts, fill variables, resolve includes, and store results back — all via API. The UI is for curation and management.
 
 **Stack:** Laravel 12 / PHP 8.3+, Livewire 3, Alpine.js, Tailwind CSS, SQLite, Vite
 
 ## Build & Dev Commands
 
 ```bash
-composer install         # Install PHP dependencies
-npm install              # Install JS dependencies
-cp .env.example .env     # Create env file
-php artisan key:generate # Generate app key
-touch database/database.sqlite
-php artisan migrate      # Run database migrations
-php artisan test         # Run PHPUnit tests (48 tests)
-composer dev             # Full dev stack (if script exists)
-php artisan serve        # Dev server at http://127.0.0.1:8000
-npm run dev              # Vite dev server with HMR
-npm run build            # Production build
+composer install && npm install
+cp .env.example .env && php artisan key:generate
+touch database/database.sqlite && php artisan migrate
+php artisan test         # 48 tests
+php artisan serve        # http://127.0.0.1:8000
+npm run dev              # Vite HMR
+npm run build            # Production
 ```
 
 ## Architecture
 
+### Core Concept
+
+URGE is a **prompt registry with version control and result archiving**, accessible by both humans (UI) and machines (API/MCP).
+
+```
+                    ┌─────────────┐
+  Claude (MCP) ────>│             │<──── Human (Browser)
+  GPT (Actions) ──>│  URGE API   │<──── Claude Skill
+  Any LLM ────────>│  + MCP      │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              v            v            v
+          Prompts    PromptVersions   Results
+          (registry)  (immutable)    (archive)
+```
+
 ### Data Flow
 
 ```
-Prompt (type: prompt|fragment) → PromptVersion[] (immutable) → Result[] (source: api|manual|import)
+Prompt (type: prompt|fragment) → PromptVersion[] (immutable) → Result[] (source: api|manual|import|mcp)
 Collection → CollectionItem[] (polymorphic: prompt_version|result)
 ```
 
@@ -35,16 +52,57 @@ Collection → CollectionItem[] (polymorphic: prompt_version|result)
 
 - **Prompt** — name, slug (auto-generated, unique), type (prompt|fragment), category_id, tags (JSON), pinned_version_id (nullable; NULL = latest is active). Soft deletes.
 - **PromptVersion** — immutable (LogicException on update). Auto-numbered per prompt. Extracts variables/includes on create. Has commit_message, variable_metadata (JSON).
-- **Result** — unified entity replacing v1's PromptRun+LlmResponse+LibraryEntry. Fields: source (api|manual|import), provider_name (free text), model_name (free text), llm_provider_id (FK, nullable), response_text, rating (1-5), starred (boolean replaces Library concept), notes, token counts, duration_ms.
+- **Result** — unified response archive. source (api|manual|import|mcp), provider_name (free text), model_name (free text), llm_provider_id (FK, nullable), response_text, rating (1-5), starred (boolean), notes, token counts, duration_ms.
 - **Category** — name, slug (auto-generated), color
 - **LlmProvider** — name, driver, api_key (encrypted), model, endpoint, settings (JSON)
-- **Collection** — title, description (Phase 3)
-- **CollectionItem** — polymorphic item_type+item_id, sort_order, notes (Phase 3)
+- **Collection** — title, description
+- **CollectionItem** — polymorphic item_type+item_id, sort_order, notes
+
+### Integration Surfaces
+
+| Surface | Protocol | Consumer |
+|---|---|---|
+| REST API | JSON over HTTP, Bearer token auth | Any HTTP client, CustomGPT Actions |
+| MCP Server | stdio transport, Model Context Protocol | Claude Desktop, Claude Code, MCP clients |
+| Claude Skill | Markdown instructions + API calls | Claude Projects |
+| Web UI | Livewire 3 (HTML over AJAX) | Humans in browsers |
+
+### MCP Tools (planned)
+
+- `get_prompt(slug, version?, variables?)` — fetch, optionally render with variables
+- `list_prompts(type?, category?, tag?, search?)` — browse registry
+- `save_version(slug, content, commit_message?)` — create new version
+- `store_result(slug, version, response_text, provider?, model?)` — archive a result
+- `get_results(slug, version?, starred?)` — retrieve past results
+- `render_prompt(slug, version?, variables{})` — resolve includes + fill variables, return rendered text
+
+### API Endpoints (planned, prefix `/api/v1/`)
+
+```
+GET    /prompts                    — list prompts (filter: type, category, tag, search)
+POST   /prompts                    — create prompt
+GET    /prompts/{slug}             — get prompt with active version
+GET    /prompts/{slug}/versions    — list versions
+POST   /prompts/{slug}/versions    — create version
+GET    /prompts/{slug}/versions/{n} — get specific version
+POST   /prompts/{slug}/render      — render with variables, return text
+GET    /prompts/{slug}/results     — list results
+POST   /prompts/{slug}/results     — store result
+GET    /results/{id}               — get single result
+PATCH  /results/{id}               — update rating/starred/notes
+GET    /health                     — health check
+```
+
+Auth: Bearer token → SHA-256 hash lookup. Keys scoped to specific prompts via pivot table.
 
 ### Services
 
-- **TemplateEngine** (`app/Services/TemplateEngine.php`) — `{{variable}}` substitution, `{{>slug}}` recursive include resolution, circular reference detection, max depth config
-- **VersioningService** (`app/Services/VersioningService.php`) — transactional version creation, auto-numbering, variable/include extraction, metadata filtering
+- **TemplateEngine** — `{{variable}}` substitution, `{{>slug}}` recursive include resolution, circular reference detection, max depth config
+- **VersioningService** — transactional version creation, auto-numbering, variable/include extraction, metadata filtering
+- **ApiKeyService** — key generation (prefix + random bytes), SHA-256 hash storage, preview
+- **ImportExportService** — .md with YAML frontmatter import/export
+- **LlmDispatchService** — driver dispatch to 6 providers (Phase 4)
+- **AiAssistantService** — meta-prompts for diff summarization, improvements (Phase 4)
 
 ### Livewire Components
 
@@ -52,7 +110,7 @@ Collection → CollectionItem[] (polymorphic: prompt_version|result)
 app/Livewire/
 ├── Dashboard.php              # Recent prompts, starred results, inline create
 ├── Browse.php                 # Tabbed prompts/fragments, search
-├── Settings.php               # Placeholder (Phase 4-5)
+├── Settings.php               # Tabbed settings container
 └── Workspace/
     ├── WorkspacePage.php      # 3-panel orchestrator
     ├── Editor.php             # Textarea, live variable detection, save version
@@ -70,41 +128,48 @@ Editor --[version-created]--> WorkspacePage --> VersionSidebar, ResultsPanel
 ManualResultForm --[result-saved]--> ResultsPanel
 ```
 
-### Routes (4 screens)
+### Routes
 
 ```
-/ → redirect to /dashboard
-/dashboard          → Dashboard (Livewire)
-/browse             → Browse (Livewire)
-/prompts/{slug}     → WorkspacePage (Livewire) — the main screen
-/settings           → Settings (Livewire)
-```
+Web (4 screens, wire:navigate):
+/dashboard, /browse, /prompts/{slug}, /settings
 
-All navigation uses `wire:navigate` for SPA-like transitions.
+API (prefix /api/v1/, Bearer auth):
+See API Endpoints above
+```
 
 ### Auth & Roles
 
-Breeze (Blade stack). Roles: admin, editor, viewer. First registered user auto-becomes admin. `RequireRole` middleware aliased as `role`.
+Web: Breeze (Blade stack). Roles: admin, editor, viewer. First user auto-admin. `RequireRole` middleware as `role`.
+API: `ApiKeyAuthentication` middleware, Bearer token, rate limited per key.
 
 ### Template Syntax
 
-- `{{variable_name}}` — variable placeholder (letter/underscore start, alphanumeric)
-- `{{>slug}}` — include another prompt's active version content
+- `{{variable_name}}` — variable placeholder
+- `{{>slug}}` — include another prompt's active version
 - Max depth: `URGE_MAX_INCLUDE_DEPTH` env (default 10)
 
 ### Key Patterns
 
-- **Blade/Alpine `{{` conflict:** Use `'{' + '{'` string splitting in JS contexts within Blade templates
-- **Auto-slug:** Prompt and Category models generate from name in `booted()` with collision counter
-- **Immutable versions:** `PromptVersion::booted()` throws `LogicException` on update
-- **Active version resolution:** `Prompt::$active_version` accessor returns pinned version if set, otherwise latest
+- **Blade/Alpine `{{` conflict:** Use `'{' + '{'` string splitting in JS contexts
+- **Auto-slug:** Prompt and Category generate from name with collision counter
+- **Immutable versions:** `PromptVersion::booted()` throws LogicException on update
+- **Active version:** Prompt accessor returns pinned version if set, otherwise latest
 
 ### Config
 
-`config/urge.php` — `max_include_depth`, `curl_ssl_verify`
+`config/urge.php` — `max_include_depth`, `curl_ssl_verify`, `api_rate_limit`, `api_rate_window`, `key_prefix`, `key_bytes`
 
 ## Current Status
 
-**Phase 1 complete.** Core workspace functional: create prompt, save versions, paste results, star/rate.
+**Phase 1 complete.** Core workspace functional: create prompt, save versions, paste results, star/rate. 48 tests passing.
 
-Remaining phases: 2 (rich editing + comparison), 3 (import/export + browse + collections), 4 (LLM integration), 5 (API + v1 migration + polish).
+### Phase Roadmap (reordered for API-first)
+
+| Phase | Focus |
+|---|---|
+| 1 (done) | Core workspace UI |
+| 2 | API layer + MCP server + OpenAPI spec |
+| 3 | Rich editing (autocomplete, visual composer, diff, compare) |
+| 4 | Import/export + collections |
+| 5 | LLM drivers + AI features + v1 migration + polish |
