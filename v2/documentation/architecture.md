@@ -102,9 +102,22 @@ System:
   GET    /health                      — health check
 ```
 
-### MCP Server
+### MCP Server (dual transport)
 
-Artisan command `php artisan urge:mcp-server` running stdio transport.
+Two transports, one shared handler layer:
+
+**SSE transport (primary, for hosted/remote URGE):**
+- HTTP endpoint at `/mcp`, authenticated via Bearer token (same API keys)
+- Use case: Claude Desktop on your laptop connects to URGE on Hostinger
+- Runs within the Laravel HTTP server — no extra process needed
+- SSE (Server-Sent Events) for server→client streaming, POST for client→server
+
+**stdio transport (secondary, for local dev):**
+- Artisan command: `php artisan urge:mcp-server`
+- Use case: Claude Code / Claude Desktop on the same machine as URGE
+- Reads JSON-RPC from stdin, writes to stdout
+
+Both transports dispatch to the same `McpToolHandler` service, which maps tool calls to TemplateEngine, VersioningService, and Eloquent queries.
 
 **Tools:**
 | Tool | Purpose |

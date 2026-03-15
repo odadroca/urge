@@ -96,21 +96,14 @@ Create public/openapi.json — OpenAPI 3.0 spec documenting all endpoints above.
 
 Add a route to serve it: GET /api/openapi.json.
 
-### 2F. MCP Server
+### 2F. MCP Tool Handler (shared logic)
 
-Create app/Console/Commands/McpServerCommand.php:
-- Artisan command: urge:mcp-server
-- Implements MCP protocol over stdio (read JSON-RPC from stdin, write to stdout)
-- No external MCP SDK dependency — implement the protocol directly (it's simple JSON-RPC 2.0)
+Create app/Services/McpToolHandler.php:
+- Central dispatcher that maps MCP tool names to service layer calls
+- No transport awareness — takes a tool name + arguments, returns a result array
+- This is shared by both SSE and stdio transports
 
-Implement these MCP methods:
-- initialize: return server info and capabilities (tools + resources)
-- tools/list: return tool definitions
-- tools/call: dispatch to tool handlers
-- resources/list: return resource definitions
-- resources/read: return resource content
-
-MCP Tools (each maps to service layer calls):
+Tool implementations (each a method on McpToolHandler):
 1. get_prompt(slug, version?): calls Prompt::where('slug', $slug), returns content + metadata
 2. list_prompts(type?, category?, tag?, search?): queries prompts, returns slug + name + type + version count
 3. render_prompt(slug, version?, variables{}): calls TemplateEngine::render(), returns rendered text
@@ -118,14 +111,34 @@ MCP Tools (each maps to service layer calls):
 5. store_result(slug, version, response_text, provider?, model?, notes?): creates Result with source='mcp'
 6. get_results(slug, version?, starred?, limit?): queries results, returns list
 
-MCP Resources:
+Resource implementations:
 - urge://prompts — list of prompts as JSON
 - urge://prompts/{slug} — prompt with active version content as text
 - urge://prompts/{slug}/v/{n} — specific version content as text
 
-The command must: read from STDIN line by line, parse JSON-RPC, dispatch, write JSON-RPC response to STDOUT. Use a while(true) loop with fgets(STDIN).
+Also implement: getToolDefinitions(), getResourceDefinitions(), getServerInfo() — return MCP protocol metadata.
 
-### 2G. Claude Skill Document
+### 2G. MCP SSE Transport (primary — for hosted/remote URGE)
+
+Create app/Http/Controllers/McpController.php:
+- POST /mcp — receives JSON-RPC requests, dispatches to McpToolHandler, returns JSON-RPC responses
+- GET /mcp — SSE endpoint for server-to-client streaming (MCP protocol requires this for SSE transport)
+- Authenticated via the same ApiKeyAuthentication middleware (Bearer token)
+- Register routes in routes/api.php (inside the api.auth middleware group)
+
+This is the primary transport because URGE runs on Hostinger (remote). Users connect Claude Desktop from their local machine to the hosted URGE instance over HTTP.
+
+### 2H. MCP stdio Transport (secondary — for local dev)
+
+Create app/Console/Commands/McpServerCommand.php:
+- Artisan command: urge:mcp-server
+- Reads JSON-RPC from STDIN line by line, dispatches to McpToolHandler, writes JSON-RPC to STDOUT
+- Same handler, different I/O — while(true) loop with fgets(STDIN)
+- Use case: Claude Code or Claude Desktop running on the same machine as URGE
+
+No external MCP SDK dependency — the protocol is simple JSON-RPC 2.0 with well-defined method names (initialize, tools/list, tools/call, resources/list, resources/read).
+
+### 2I. Claude Skill Document
 
 Create documentation/claude-skill.md:
 - Markdown instructions a user can paste into Claude Projects or custom instructions
@@ -133,7 +146,7 @@ Create documentation/claude-skill.md:
 - Lists available endpoints with example requests/responses
 - Includes a "quick start" section: how to get an API key, how to fetch and render a prompt
 
-### 2H. API Key Settings UI
+### 2J. API Key Settings UI
 
 Create app/Livewire/Settings/ApiKeys.php and view:
 - List all API keys (name, preview, last_used, active status)
@@ -143,13 +156,15 @@ Create app/Livewire/Settings/ApiKeys.php and view:
 
 Update Settings.php to render ApiKeys as a tab.
 
-### 2I. Tests
+### 2K. Tests
 
 Create tests for:
 - ApiKeyService: generation, hashing, lookup, expiry
 - ApiKeyAuthentication middleware: valid token, invalid token, rate limiting, expired key
 - All API endpoints: CRUD prompts, versions, results, render
-- MCP server: tool calls (mock stdin/stdout)
+- McpToolHandler: all 6 tools with mock data (unit test the handler directly)
+- MCP SSE controller: POST /mcp with valid tool calls
+- MCP stdio command: mock stdin/stdout
 - Prompt scoping: key with scoped prompts can only access those prompts
 
 Run php artisan test — all tests must pass.

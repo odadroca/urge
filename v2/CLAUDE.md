@@ -63,18 +63,31 @@ Collection → CollectionItem[] (polymorphic: prompt_version|result)
 | Surface | Protocol | Consumer |
 |---|---|---|
 | REST API | JSON over HTTP, Bearer token auth | Any HTTP client, CustomGPT Actions |
-| MCP Server | stdio transport, Model Context Protocol | Claude Desktop, Claude Code, MCP clients |
+| MCP Server (SSE) | HTTP SSE transport, Bearer auth, Model Context Protocol | Remote MCP clients (Claude Desktop pointing at hosted URGE) |
+| MCP Server (stdio) | stdio transport, Model Context Protocol | Local MCP clients (Claude Code, Claude Desktop on same machine) |
 | Claude Skill | Markdown instructions + API calls | Claude Projects |
 | Web UI | Livewire 3 (HTML over AJAX) | Humans in browsers |
 
-### MCP Tools (planned)
+### MCP Server (dual transport)
 
+**SSE (primary, for remote/hosted URGE):** HTTP endpoint at `/mcp`, authenticated via Bearer token (same API keys). Claude Desktop on your local machine connects to your hosted URGE instance over the network.
+
+**stdio (secondary, for local dev):** Artisan command `php artisan urge:mcp-server`. Same handler logic, different transport wrapper.
+
+Both transports share the same tool dispatch layer — the handler resolves tool calls to service layer methods identically.
+
+**Tools:**
 - `get_prompt(slug, version?, variables?)` — fetch, optionally render with variables
 - `list_prompts(type?, category?, tag?, search?)` — browse registry
 - `save_version(slug, content, commit_message?)` — create new version
 - `store_result(slug, version, response_text, provider?, model?)` — archive a result
 - `get_results(slug, version?, starred?)` — retrieve past results
 - `render_prompt(slug, version?, variables{})` — resolve includes + fill variables, return rendered text
+
+**Resources:**
+- `urge://prompts` — list of all prompts
+- `urge://prompts/{slug}` — prompt with active version content
+- `urge://prompts/{slug}/v/{n}` — specific version content
 
 ### API Endpoints (planned, prefix `/api/v1/`)
 
