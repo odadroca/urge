@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\InternalApiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Web\Admin\LlmProviderController;
 use App\Http\Controllers\Web\ApiKeyController;
@@ -18,6 +19,10 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Internal API (for autocomplete / inline features)
+    Route::get('/internal/variables', [InternalApiController::class, 'variables'])->name('internal.variables');
+    Route::get('/internal/fragments', [InternalApiController::class, 'fragments'])->name('internal.fragments');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

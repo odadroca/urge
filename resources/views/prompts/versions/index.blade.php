@@ -15,7 +15,7 @@
         </div>
     </x-slot>
 
-    <div class="py-12" x-data="{ selected: [] }">
+    <div class="py-12" x-data="{ selected: [], versionContents: @js($versions->pluck('content', 'version_number')), ...diffViewer() }">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-4">
             @if(session('success'))
                 <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
@@ -99,12 +99,22 @@
                 <div class="flex items-center gap-3">
                     <button @click="selected = []" class="text-sm text-indigo-200 hover:text-white transition-colors">Clear</button>
                     <button x-show="selected.length === 2"
+                            @click="openDiff(
+                                versionContents[Math.min(...selected)],
+                                versionContents[Math.max(...selected)],
+                                'v' + Math.min(...selected),
+                                'v' + Math.max(...selected)
+                            )"
+                            class="inline-flex items-center gap-1.5 text-sm bg-indigo-200 text-indigo-800 font-medium px-4 py-1.5 rounded-md hover:bg-indigo-100 transition-colors">
+                        Quick Diff
+                    </button>
+                    <button x-show="selected.length === 2"
                             @click="window.location = '{{ route('prompts.versions.compare', $prompt) }}?v1=' + Math.min(...selected) + '&v2=' + Math.max(...selected)"
                             class="inline-flex items-center gap-1.5 text-sm bg-white text-indigo-600 font-medium px-4 py-1.5 rounded-md hover:bg-indigo-50 transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" d="M8 7h12M8 12h8M8 17h12"/>
                         </svg>
-                        View diff →
+                        Full diff →
                     </button>
                 </div>
             </div>
@@ -160,6 +170,8 @@
             </div>
             @endcan
             @endif
+            {{-- Quick diff modal --}}
+            @include('prompts.versions.diff-modal')
         </div>
     </div>
 </x-app-layout>
