@@ -17,8 +17,7 @@
         </div>
     </x-slot>
 
-    <div class="py-12" x-data="{ onlyDiff: false, diffView: 'lines', ...diffViewer() }"
-         x-init="openDiff(@js($versionA->content), @js($versionB->content), 'v{{ $versionA->version_number }}', 'v{{ $versionB->version_number }}'); showDiffModal = false;">
+    <div class="py-12" x-data="{ onlyDiff: false }">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-4">
 
             {{-- Version meta + stats --}}
@@ -54,27 +53,7 @@
                             @endif
                         </div>
 
-                        {{-- Diff view mode selector --}}
-                        <div class="inline-flex rounded-md shadow-sm">
-                            <button @click="diffView = 'lines'"
-                                    class="px-3 py-1.5 text-xs font-medium rounded-l-md border transition"
-                                    :class="diffView === 'lines' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
-                                Lines
-                            </button>
-                            <button @click="diffView = 'words'"
-                                    class="px-3 py-1.5 text-xs font-medium border-t border-r border-b transition"
-                                    :class="diffView === 'words' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
-                                Words
-                            </button>
-                            <button @click="diffView = 'chars'"
-                                    class="px-3 py-1.5 text-xs font-medium rounded-r-md border-t border-r border-b transition"
-                                    :class="diffView === 'chars' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
-                                Chars
-                            </button>
-                        </div>
-
                         <button @click="onlyDiff = !onlyDiff"
-                            x-show="diffView === 'lines'"
                             :class="onlyDiff
                                 ? 'bg-indigo-600 text-white border-indigo-600'
                                 : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'"
@@ -88,8 +67,8 @@
                 </div>
             </div>
 
-            {{-- Line-based diff block --}}
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden" x-show="diffView === 'lines'">
+            {{-- Diff block --}}
+            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                 @if($additions === 0 && $removals === 0)
                     <div class="p-10 text-center text-gray-400 text-sm">
                         These two versions have identical content.
@@ -122,6 +101,7 @@
 
                             @else
                                 @php $equalCount = count($group['items']); @endphp
+                                {{-- Equal group: individual lines, hidden when showing only differences --}}
                                 @foreach($group['items'] as $item)
                                 <tr class="hover:bg-gray-50" x-show="!onlyDiff">
                                     <td class="w-10 text-right pr-3 pl-2 py-0.5 text-gray-300 select-none border-r border-gray-100">{{ $item['lineA'] }}</td>
@@ -130,6 +110,7 @@
                                     <td class="pl-4 pr-6 py-0.5 text-gray-500 whitespace-pre-wrap break-all">{{ $item['line'] }}</td>
                                 </tr>
                                 @endforeach
+                                {{-- Equal group: summary row, visible only when showing differences --}}
                                 <tr class="bg-gray-50 border-t border-b border-gray-200" x-show="onlyDiff">
                                     <td colspan="4" class="px-4 py-1.5 text-gray-400 text-xs select-none">
                                         ··· {{ $equalCount }} unchanged line{{ $equalCount !== 1 ? 's' : '' }}
@@ -142,27 +123,6 @@
                     </table>
                 </div>
                 @endif
-            </div>
-
-            {{-- Word/char-level diff block --}}
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden" x-show="diffView === 'words' || diffView === 'chars'" x-cloak
-                 x-effect="if (diffView === 'words') { diffMode = 'words'; computeDiff(); } else if (diffView === 'chars') { diffMode = 'chars'; computeDiff(); }">
-                <div class="p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <span x-text="diffView === 'words' ? 'Word-level' : 'Character-level'"></span> Diff
-                        </p>
-                        <div class="flex items-center gap-3 text-xs font-mono">
-                            <template x-if="stats.additions > 0">
-                                <span class="text-green-700 font-semibold">+<span x-text="stats.additions"></span></span>
-                            </template>
-                            <template x-if="stats.removals > 0">
-                                <span class="text-red-700 font-semibold">-<span x-text="stats.removals"></span></span>
-                            </template>
-                        </div>
-                    </div>
-                    <pre class="font-mono text-sm whitespace-pre-wrap break-words leading-relaxed bg-gray-50 border border-gray-200 rounded-md p-4 overflow-auto max-h-[32rem]" x-html="unifiedHtml"></pre>
-                </div>
             </div>
 
         </div>

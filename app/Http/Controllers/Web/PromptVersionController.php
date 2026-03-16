@@ -55,21 +55,7 @@ class PromptVersionController extends Controller
             'variable_metadata.*.description' => ['nullable', 'string'],
             'variable_metadata.*.options' => ['nullable', 'array'],
             'variable_metadata.*.options.*' => ['string'],
-            'variable_metadata.*.options_csv' => ['nullable', 'string'],
         ]);
-
-        // Convert options_csv to options array for enum types
-        if (!empty($data['variable_metadata'])) {
-            foreach ($data['variable_metadata'] as $varName => &$meta) {
-                if (!empty($meta['options_csv'])) {
-                    $meta['options'] = array_values(array_filter(
-                        array_map('trim', explode(',', $meta['options_csv']))
-                    ));
-                }
-                unset($meta['options_csv']);
-            }
-            unset($meta);
-        }
 
         $version = $this->versioning->createVersion($prompt, $data, auth()->user());
 

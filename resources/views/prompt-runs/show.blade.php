@@ -10,7 +10,7 @@
         </div>
     </x-slot>
 
-    <div class="py-12" x-data="{ compareIds: [], showCompare: false }">
+    <div class="py-12">
         <div class="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
             @if(session('success'))
@@ -50,43 +50,17 @@
             @if($run->responses->isEmpty())
             <div class="bg-white shadow-sm sm:rounded-lg p-8 text-center text-gray-400">No responses recorded for this run.</div>
             @else
-            @if($run->responses->count() > 1)
-            {{-- Compare bar --}}
-            <div x-show="compareIds.length > 0" x-cloak
-                 class="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 flex items-center justify-between">
-                <span class="text-sm text-indigo-700 font-medium">
-                    <span x-text="compareIds.length"></span> response<span x-show="compareIds.length !== 1">s</span> selected for comparison
-                </span>
-                <div class="flex items-center gap-3">
-                    <button @click="compareIds = []" class="text-xs text-indigo-500 hover:text-indigo-700">Clear</button>
-                    <button @click="showCompare = true"
-                            x-show="compareIds.length >= 2"
-                            class="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition">
-                        Compare Selected
-                    </button>
-                </div>
-            </div>
-            @endif
-
             <div class="grid grid-cols-1 {{ $run->responses->count() > 1 ? 'lg:grid-cols-2' : '' }} gap-6">
                 @foreach($run->responses as $response)
                 <div class="bg-white shadow-sm sm:rounded-lg p-6 flex flex-col"
                      x-data="{ rating: {{ $response->rating ?? 0 }}, saving: false }"
-                     id="response-{{ $response->id }}"
-                     :class="compareIds.includes({{ $response->id }}) ? 'ring-2 ring-indigo-300' : ''">
+                     id="response-{{ $response->id }}">
 
                     {{-- Card header --}}
                     <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            @if($run->responses->count() > 1)
-                            <input type="checkbox"
-                                   value="{{ $response->id }}"
-                                   x-model.number="compareIds"
-                                   :disabled="compareIds.length >= 4 && !compareIds.includes({{ $response->id }})"
-                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed">
-                            @endif
+                        <div>
                             <span class="font-semibold text-gray-800">{{ $response->provider->name }}</span>
-                            <span class="text-xs text-gray-400 font-mono">{{ $response->model_used }}</span>
+                            <span class="ml-2 text-xs text-gray-400 font-mono">{{ $response->model_used }}</span>
                         </div>
                         @if($response->isSuccess())
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">success</span>
@@ -182,90 +156,6 @@
                 <a href="{{ route('prompt-runs.create', $prompt) }}" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">New Run</a>
                 <a href="{{ route('prompt-runs.index', $prompt) }}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50">All Runs</a>
             </div>
-
-            {{-- Compare modal --}}
-            @if($run->responses->count() > 1)
-            @php
-                $responseData = $run->responses->mapWithKeys(function ($r) {
-                    return [$r->id => [
-                        'id' => $r->id,
-                        'provider' => $r->provider->name,
-                        'model' => $r->model_used,
-                        'status' => $r->status,
-                        'text' => $r->response_text,
-                        'error' => $r->error_message,
-                        'rating' => $r->rating,
-                        'duration_ms' => $r->duration_ms,
-                        'input_tokens' => $r->input_tokens,
-                        'output_tokens' => $r->output_tokens,
-                    ]];
-                });
-            @endphp
-            <div x-show="showCompare" x-cloak
-                 class="fixed inset-0 z-50 overflow-y-auto"
-                 @keydown.escape.window="showCompare = false"
-                 x-data="{ allResponses: {{ $responseData->toJson() }} }">
-                {{-- Backdrop --}}
-                <div class="fixed inset-0 bg-black/50" @click="showCompare = false"></div>
-
-                {{-- Modal --}}
-                <div class="relative min-h-screen flex items-start justify-center p-4 pt-8">
-                    <div class="relative bg-white rounded-lg shadow-xl w-full max-w-7xl overflow-hidden" @click.stop>
-                        {{-- Header --}}
-                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-800 text-lg">Compare Responses</h3>
-                            <button @click="showCompare = false" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
-                        </div>
-
-                        {{-- Side-by-side comparison --}}
-                        <div class="p-6 overflow-x-auto">
-                            <div class="flex gap-4" :style="'min-width: ' + (compareIds.length * 350) + 'px'">
-                                <template x-for="rid in compareIds" :key="rid">
-                                    <div class="flex-1 min-w-[320px] border border-gray-200 rounded-lg overflow-hidden">
-                                        {{-- Column header --}}
-                                        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                                            <div class="flex items-center justify-between">
-                                                <div>
-                                                    <span class="font-semibold text-gray-800 text-sm" x-text="allResponses[rid]?.provider"></span>
-                                                    <span class="text-xs text-gray-400 font-mono ml-1" x-text="allResponses[rid]?.model"></span>
-                                                </div>
-                                                <template x-if="allResponses[rid]?.rating">
-                                                    <span class="text-yellow-500 text-sm" x-text="'★'.repeat(allResponses[rid].rating) + '☆'.repeat(5 - allResponses[rid].rating)"></span>
-                                                </template>
-                                            </div>
-                                            <div class="flex gap-3 text-[10px] text-gray-400 mt-1">
-                                                <template x-if="allResponses[rid]?.duration_ms">
-                                                    <span x-text="(allResponses[rid].duration_ms / 1000).toFixed(2) + 's'"></span>
-                                                </template>
-                                                <template x-if="allResponses[rid]?.input_tokens || allResponses[rid]?.output_tokens">
-                                                    <span x-text="(allResponses[rid].input_tokens || '?') + ' in / ' + (allResponses[rid].output_tokens || '?') + ' out'"></span>
-                                                </template>
-                                            </div>
-                                        </div>
-
-                                        {{-- Response body --}}
-                                        <div class="p-4 max-h-[60vh] overflow-auto">
-                                            <template x-if="allResponses[rid]?.status === 'success'">
-                                                <pre class="text-sm font-mono text-gray-800 whitespace-pre-wrap break-words leading-relaxed" x-text="allResponses[rid].text"></pre>
-                                            </template>
-                                            <template x-if="allResponses[rid]?.status !== 'success'">
-                                                <div class="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
-                                                    <strong>Error:</strong> <span x-text="allResponses[rid]?.error"></span>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @endif
         </div>
     </div>
 </x-app-layout>
